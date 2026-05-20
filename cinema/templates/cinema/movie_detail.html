@@ -1,0 +1,139 @@
+{% extends 'cinema/base.html' %}
+{% block content %}
+<div style="max-width: 1000px; margin: 0 auto; padding: 10px;">
+
+    <a href="{% url 'movies_list' %}" style="text-decoration: none; color: #007bff; font-weight: bold;">&larr; Назад к афише</a>
+
+    {% if messages %}
+        <div style="margin-top: 20px;">
+            {% for message in messages %}
+                <div style="padding: 15px; border-radius: 6px; margin-bottom: 15px; font-weight: bold; font-size: 15px;
+                            {% if message.tags == 'error' %} background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb;
+                            {% else %} background: #d4edda; color: #155724; border: 1px solid #c3e6cb; {% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <div style="display: flex; gap: 30px; margin-top: 20px; flex-wrap: wrap;">
+        <div style="flex: 1; min-width: 300px; max-width: 400px;">
+            {% if movie.poster %}
+                <img src="{{ movie.poster.url }}" alt="{{ movie.title }}" style="width: 100%; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.15);">
+            {% endif %}
+        </div>
+
+        <div style="flex: 2; min-width: 300px;">
+            <h2 style="margin-top: 0;">{{ movie.title_ru }} {% if movie.title_en %}<span style="font-weight: normal; color: #777; font-size: 18px;">({{ movie.title_en }})</span>{% endif %}</h2>
+            <p style="font-size: 16px; line-height: 1.6; color: #444;">{{ movie.description }}</p>
+
+            <table style="width: 100%; margin-top: 20px; border-collapse: collapse;">
+                <tr>
+                    <td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #666;"><strong>Продолжительность:</strong></td>
+                    <td style="padding: 8px 0; border-bottom: 1px solid #eee;">{{ movie.duration }} минут</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #666;"><strong>Страна производства:</strong></td>
+                    <td style="padding: 8px 0; border-bottom: 1px solid #eee;">
+                        {% for country in movie.countries.all %}
+                            {{ country.name }}{% if not forloop.last %}, {% endif %}
+                        {% empty %}
+                            <span style="color: #999;">Не указаны</span>
+                        {% endfor %}
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #666;"><strong>Бюджет:</strong></td>
+                    <td style="padding: 8px 0; border-bottom: 1px solid #eee;">${{ movie.budget }}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #666;"><strong>Рейтинг:</strong></td>
+                    <td style="padding: 8px 0; border-bottom: 1px solid #eee;"><strong style="color: #ff9900;">★ {{ movie.rating }}</strong> / 10</td>
+                </tr>
+
+                {% if is_employee %}
+                <tr>
+                    <td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #666;"><strong>Всего продано билетов:</strong></td>
+                    <td style="padding: 8px 0; border-bottom: 1px solid #eee;"><strong style="color: #007bff;">{{ total_tickets_sold }}</strong> шт.</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #666;"><strong>Общая выручка:</strong></td>
+                    <td style="padding: 8px 0; border-bottom: 1px solid #eee;"><strong style="color: #28a745;">{{ total_revenue|floatformat:2 }} BYN</strong></td>
+                </tr>
+                {% endif %}
+            </table>
+
+            <h3 style="margin-top: 40px;">Ближайшие сеансы</h3>
+            {% if showtimes %}
+                <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 15px;">
+                    {% for showtime_data in showtimes_with_stats %}
+                        <div style="padding: 15px; border: 1px solid #e0e0e0; border-radius: 6px; background: #fafafa;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <strong style="font-size: 16px;">{{ showtime_data.showtime.start_time|date:"d/m/Y в H:i" }}</strong>
+                                    <div style="font-size: 14px; color: #666; margin-top: 4px;">Зал: {{ showtime_data.showtime.hall.name }}</div>
+                                </div>
+                                <div style="text-align: right;">
+                                    <span style="font-size: 18px; font-weight: bold; color: #28a745; margin-right: 15px;">{{ showtime_data.showtime.ticket_price }} BYN</span>
+                                    {% if not is_employee %}
+                                        {% if user.is_authenticated %}
+                                            <a href="{% url 'select_seats' showtime_data.showtime.id %}" style="background: #28a745; color: white; padding: 8px 12px; border-radius: 4px; text-decoration: none; font-size: 14px; font-weight: bold;">Выбрать место</a>
+                                        {% else %}
+                                            <a href="{% url 'login' %}" style="background: #6c757d; color: white; padding: 8px 12px; border-radius: 4px; text-decoration: none; font-size: 14px;">Войти для покупки</a>
+                                        {% endif %}
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            {% if is_employee %}
+                            <div style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed #ccc;">
+                                <div style="display: flex; gap: 20px; font-size: 14px; flex-wrap: wrap;">
+                                    <span style="color: #555;">
+                                        🎫 Продано билетов: <strong>{{ showtime_data.tickets_sold }}</strong> из {{ showtime_data.showtime.hall.capacity }}
+                                    </span>
+                                    <span style="color: #555;">
+                                        💰 Выручка: <strong style="color: #28a745;">{{ showtime_data.revenue|floatformat:2 }} BYN</strong>
+                                    </span>
+                                    <span style="color: #555;">
+                                        📊 Заполненность: <strong>{{ showtime_data.occupancy|floatformat:1 }}%</strong>
+                                    </span>
+                                </div>
+                                {% if showtime_data.tickets_sold > 0 %}
+                                <details style="margin-top: 10px;">
+                                    <summary style="cursor: pointer; color: #007bff; font-size: 14px;">Показать список купленных билетов ({{ showtime_data.tickets_sold }})</summary>
+                                    <div style="margin-top: 8px; max-height: 200px; overflow-y: auto;">
+                                        <table style="width: 100%; font-size: 13px; border-collapse: collapse;">
+                                            <thead>
+                                                <tr style="background: #f0f0f0;">
+                                                    <th style="padding: 5px; border: 1px solid #ddd; text-align: left;">Покупатель</th>
+                                                    <th style="padding: 5px; border: 1px solid #ddd; text-align: center;">Ряд</th>
+                                                    <th style="padding: 5px; border: 1px solid #ddd; text-align: center;">Место</th>
+                                                    <th style="padding: 5px; border: 1px solid #ddd; text-align: right;">Цена</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for ticket in showtime_data.tickets_list %}
+                                                <tr>
+                                                    <td style="padding: 5px; border: 1px solid #eee;">{{ ticket.customer.username|default:"Гость" }}</td>
+                                                    <td style="padding: 5px; border: 1px solid #eee; text-align: center;">{{ ticket.row }}</td>
+                                                    <td style="padding: 5px; border: 1px solid #eee; text-align: center;">{{ ticket.seat }}</td>
+                                                    <td style="padding: 5px; border: 1px solid #eee; text-align: right;">{{ showtime_data.showtime.ticket_price }} BYN</td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </details>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p style="color: #888; font-style: italic;">К сожалению, запланированных сеансов на этот фильм сейчас нет.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

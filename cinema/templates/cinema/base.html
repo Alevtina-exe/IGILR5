@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Кинотеатр</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f4f4f9; }
+        header { background: #333; color: #fff; padding: 15px; text-align: center; }
+        nav a { color: #fff; margin: 0 15px; text-decoration: none; font-weight: bold; }
+
+        /* Стили для ссылок авторизации, чтобы они гармонично смотрелись в навигации */
+        .nav-auth-box { display: inline-block; margin-left: 15px; }
+        .nav-auth-box span { color: #ccc; font-size: 14px; }
+        .nav-auth-box a.profile-link { color: #007bff; }
+        .nav-auth-box a.logout-link { color: #dc3545; }
+        .nav-auth-box a.login-link { color: #007bff; }
+        .nav-auth-box a.register-link { color: #28a745; }
+
+        .container { padding: 20px; max-width: 1200px; margin: auto; background: white; margin-top: 20px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        footer { text-align: center; padding: 20px; color: #777; font-size: 14px; margin-top: 30px;}
+    </style>
+</head>
+<body>
+    <header>
+        <h2>Grand Cinema</h2>
+        <nav>
+            <a href="{% url 'index' %}">Главная</a> |
+            <a href="{% url 'about' %}">О компании</a> |
+            <a href="{% url 'movies_list' %}">Афиша фильмов</a> |
+            <a href="{% url 'reviews' %}">Отзывы</a> |
+            <a href="{% url 'contacts' %}">Контакты</a>
+
+            <div class="nav-auth-box">
+                |
+                {% if user.is_authenticated %}
+                    <span style="margin-right: 15px;">Привет, <strong>{{ user.username }}</strong>!</span>
+                    <a href="{% url 'profile' %}" class="profile-link" style="margin-right: 15px; text-decoration: none; font-weight: bold;">Личный кабинет</a>
+                    <a href="{% url 'logout' %}" class="logout-link" style="text-decoration: none;">Выйти</a>
+                {% else %}
+                    <a href="{% url 'login' %}" class="login-link" style="margin-right: 15px; text-decoration: none;">Войти</a>
+                {% endif %}
+            </div>
+        </nav>
+    </header>
+
+    <div class="container">
+        {% block content %}{% endblock %}
+    </div>
+
+    <hr style="margin-top: 50px; border: 0; border-top: 1px solid #e0e0e0;">
+    <footer style="background-color: #fcfcfc; color: #444; padding: 30px 20px; font-family: 'JetBrains Mono', 'Consolas', 'Monaco', monospace; font-size: 14px; border-top: 1px solid #eaeaea;">
+        <div style="max-width: 1000px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 12px;">
+
+            <p style="margin: 0; letter-spacing: 0.3px;">
+                <span style="color: #888;">Таймзона:</span> <strong style="color: #111;">{{ footer_user_tz }}</strong>
+            </p>
+
+            <p style="margin: 0; letter-spacing: 0.3px;">
+                <span style="color: #888;">Текущая дата:</span> <strong style="color: #111;">{{ footer_current_date }}</strong>
+            </p>
+
+            <div style="margin-top: 8px;">
+                <pre style="background: #ffffff; color: #222; padding: 15px 20px; border: 1px solid #e5e5e5; border-radius: 8px; margin: 0; font-family: 'JetBrains Mono', 'Consolas', 'Monaco', monospace; font-size: 13px; line-height: 1.4; text-align: left; display: inline-block; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">{{ footer_text_calendar }}</pre>
+            </div>
+
+        </div>
+    </footer>
+</body>
+</html>

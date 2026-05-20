@@ -1,0 +1,26 @@
+{% extends 'cinema/base.html' %}
+{% block content %}
+<h2>О нашей компании</h2>
+
+{% if company_info %}
+    <div style="display: flex; gap: 20px; margin-top: 20px; align-items: start;">
+        {% if company_info.logo %}
+            <img src="{{ company_info.logo.url }}" alt="Логотип" style="max-width: 200px; border-radius: 8px; box-shadow: 0 0 5px rgba(0,0,0,0.2);">
+        {% endif %}
+        <div>
+            <h3>{{ company_info.title }}</h3>
+            <p style="line-height: 1.6; white-space: pre-line;">{{ company_info.description }}</p>
+        </div>
+    </div>
+    
+    <hr style="margin: 30px 0;">
+    
+    <h3>Юридические реквизиты</h3>
+    <div style="background: #f8f9fa; padding: 15px; border-left: 4px solid #333; font-family: monospace; white-space: pre-line;">
+        {{ company_info.requisites }}
+    </div>
+{% else %}
+    <p>Информация о компании еще не заполнена в админ-панели.</p>
+    <p style="color: #666; font-size: 14px;">Зайдите в <a href="/admin/">админку</a> и добавьте запись в таблицу "О компании".</p>
+{% endif %}
+{% endblock %}

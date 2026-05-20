@@ -1,0 +1,170 @@
+{% extends 'cinema/base.html' %}
+
+{% block content %}
+<div style="max-width: 1200px; margin: 0 auto; padding: 20px; font-family: sans-serif;">
+
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+        <h2 style="margin: 0; color: #333;">Текущая афиша фильмов</h2>
+
+        {% if user.is_authenticated and user.is_superuser or user.staffprofile %}
+            <a href="{% url 'news_create' %}" style="background: #28a745; color: white; padding: 10px 15px; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 14px;">
+                + Добавить контент
+            </a>
+        {% endif %}
+    </div>
+
+    <div style="background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px; margin-bottom: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+        <form method="GET" action="" style="display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-end;">
+
+            <div style="flex: 1; min-width: 200px;">
+                <label for="search" style="display: block; font-size: 13px; font-weight: bold; color: #555; margin-bottom: 6px;">Поиск по названию, описанию или режиссеру</label>
+                <input type="text" id="search" name="search" value="{{ request.GET.search }}" placeholder="Введите текст..."
+                       style="width: 100%; padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 14px;">
+            </div>
+
+            <div style="width: 180px;">
+                <label for="genre" style="display: block; font-size: 13px; font-weight: bold; color: #555; margin-bottom: 6px;">Жанр</label>
+                <select id="genre" name="genre" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; background-color: white;">
+                    <option value="">Все жанры</option>
+                    {% for g in all_genres %}
+                        <option value="{{ g.id }}" {% if request.GET.genre == g.id|slugify %}selected{% endif %}>{{ g.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div style="width: 180px;">
+                <label for="country" style="display: block; font-size: 13px; font-weight: bold; color: #555; margin-bottom: 6px;">Страна</label>
+                <select id="country" name="country" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; background-color: white;">
+                    <option value="">Все страны</option>
+                    {% for c in all_countries %}
+                        <option value="{{ c.id }}" {% if request.GET.country == c.id|slugify %}selected{% endif %}>{{ c.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div style="width: 200px;">
+                <label for="ordering" style="display: block; font-size: 13px; font-weight: bold; color: #555; margin-bottom: 6px;">Сортировка</label>
+                <select id="ordering" name="ordering" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; background-color: white;">
+                    <option value="title_ru" {% if sort_by == 'title_ru' %}selected{% endif %}>По алфавиту (А-Я)</option>
+                    <option value="-title_ru" {% if sort_by == '-title_ru' %}selected{% endif %}>По алфавиту (Я-А)</option>
+                    <option value="-rating" {% if sort_by == '-rating' %}selected{% endif %}>Высокий локальный рейтинг</option>
+                    <option value="-imdb_rating" {% if sort_by == '-imdb_rating' %}selected{% endif %}>Высокий рейтинг IMDb</option>
+                    <option value="-release_year" {% if sort_by == '-release_year' %}selected{% endif %}>Сначала новые (по году)</option>
+                    <option value="duration" {% if sort_by == 'duration' %}selected{% endif %}>Короткие фильмы</option>
+                </select>
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+                <button type="submit" style="background: #007bff; color: white; border: none; padding: 9px 18px; font-size: 14px; font-weight: bold; border-radius: 4px; cursor: pointer;">Применить</button>
+                <a href="{% url 'movies_list' %}" style="background: #6c757d; color: white; text-decoration: none; padding: 9px 18px; font-size: 14px; font-weight: bold; border-radius: 4px; display: inline-block;">Сбросить</a>
+            </div>
+
+        </form>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 25px;">
+        {% for movie in movies %}
+            <div class="movie-card" style="background: #ffffff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px; display: flex; gap: 25px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); flex-wrap: wrap;">
+
+                <div style="flex: 0 0 200px; max-width: 200px;">
+                    {% if movie.poster %}
+                        <img src="{{ movie.poster.url }}" alt="{{ movie.title_ru }}" style="width: 100%; height: auto; border-radius: 6px; object-fit: cover; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+                    {% else %}
+                        <div style="width: 100%; height: 280px; background: #eaedf0; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #777; font-size: 14px; border: 1px dashed #ccc;">
+                            Постер отсутствует
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div style="flex: 1; min-width: 300px; display: flex; flex-direction: column; justify-content: space-between;">
+                    <div>
+                        <h3 style="margin: 0 0 10px 0; font-size: 24px; color: #111;">
+                            {{ movie.title_ru }} <span style="color: #666; font-size: 19px; font-weight: normal;">({{ movie.title_en }})</span>
+                        </h3>
+
+                        <div style="margin-bottom: 15px;">
+                            {% for genre in movie.genres.all %}
+                                <span style="background: #e1f5fe; color: #0288d1; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; margin-right: 5px;">
+                                    {{ genre.name }}
+                                </span>
+                            {% endfor %}
+                        </div>
+
+                        <p style="color: #555; line-height: 1.6; margin: 0 0 15px 0;">{{ movie.description }}</p>
+
+                        <div style="font-size: 14px; color: #666; margin-bottom: 15px;">
+                            <span style="margin-right: 20px;">⏱️ Длительность: {{ movie.duration }} мин.</span>
+
+                            <span style="margin-right: 20px;">
+                                Страны:
+                                {% for country in movie.countries.all %}
+                                    {{ country.name }}{% if not forloop.last %}, {% endif %}
+                                {% empty %}
+                                    <span style="color: #999;">Не указаны</span>
+                                {% endfor %}
+                            </span>
+
+                            <span>⭐ Локальная оценка: {{ movie.rating }}/10</span>
+                        </div>
+                    </div>
+
+                    <div style="background: #f8f9fa; border-left: 4px solid #007bff; padding: 12px 15px; border-radius: 0 4px 4px 0; margin-bottom: 20px;">
+                        <h5 style="margin: 0 0 8px 0; color: #007bff; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">
+                            Данные из IMDB:
+                        </h5>
+                        <div style="display: flex; gap: 20px; flex-wrap: wrap; font-size: 13.5px; color: #333;">
+                            <p style="margin: 0;">🎬 Рейтинг IMDb: <span style="color: #e67e22; font-weight: bold;">{{ movie.imdb_rating }}/10</span></p>
+                            <p style="margin: 0;">🎥 Режиссёр: {{ movie.director }}</p>
+                            <p style="margin: 0;">📅 Год релиза: {{ movie.release_year }}</p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <a href="{% url 'movie_detail' movie.id %}" style="background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block; transition: background 0.2s;">
+                            Смотреть расписание и сеансы
+                        </a>
+                    </div>
+
+                </div>
+            </div>
+        {% empty %}
+            <p style="text-align: center; color: #666; font-size: 16px; margin-top: 4px;">Фильмов по заданным параметрам не найдено.</p>
+        {% endfor %}
+    </div>
+
+    <hr style="border: 0; border-top: 1px solid #ccc; margin: 50px 0 30px 0;">
+
+    <div style="background: #fffbe6; border: 1px solid #ffe58f; border-radius: 8px; padding: 20px;">
+        <h3 style="margin-top: 0; color: #d46b08; display: flex; align-items: center; gap: 8px;">
+            Действующие промокоды и купоны
+        </h3>
+        <p style="font-size: 14px; color: #555; margin-bottom: 15px;">
+            Назовите действующий промокод кассиру при покупке билета или введите его в личном кабинете!
+        </p>
+
+        <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 25px;">
+            {% for promo in active_promos %}
+                <div style="background: white; border: 2px dashed #d46b08; padding: 10px 15px; border-radius: 4px; text-align: center; min-width: 180px;">
+                    <span style="font-family: monospace; font-size: 18px; font-weight: bold; color: #d46b08; display: block; margin-bottom: 5px;">{{ promo.code }}</span>
+                    <span style="font-size: 12px; color: #777;">{{ promo.description }}</span>
+                </div>
+            {% empty %}
+                <p style="font-size: 14px; color: #777; margin: 0;">Сейчас нет активных промокодов.</p>
+            {% endfor %}
+        </div>
+
+        <h4 style="margin: 20px 0 10px 0; color: #777; font-size: 15px;">Архивные (истекшие) купоны:</h4>
+        <div style="display: flex; gap: 15px; flex-wrap: wrap; opacity: 0.6;">
+            {% for promo in archived_promos %}
+                <div style="background: #f5f5f5; border: 2px dashed #999; padding: 8px 12px; border-radius: 4px; text-align: center; min-width: 160px;">
+                    <span style="font-family: monospace; font-size: 16px; font-weight: bold; color: #666; display: block; margin-bottom: 3px; text-decoration: line-through;">{{ promo.code }}</span>
+                    <span style="font-size: 11px; color: #888;">{{ promo.description }}</span>
+                </div>
+            {% empty %}
+                <p style="font-size: 13px; color: #999; margin: 0;">Архив пуст.</p>
+            {% endfor %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}

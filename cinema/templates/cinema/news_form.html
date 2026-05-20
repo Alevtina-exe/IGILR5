@@ -1,0 +1,22 @@
+{% extends 'cinema/base.html' %}
+{% block content %}
+<h2>{{ action }} новость</h2>
+<form method="POST" style="max-width: 600px; display: flex; flex-direction: column; gap: 15px;">
+    {% csrf_token %}
+    <div>
+        <label style="display:block; font-weight:bold; margin-bottom:5px;">Заголовок:</label>
+        <input type="text" name="title" value="{{ article.title }}" required style="width:100%; padding:8px;">
+    </div>
+    <div>
+        <label style="display:block; font-weight:bold; margin-bottom:5px;">Краткое описание:</label>
+        <textarea name="short_description" required style="width:100%; padding:8px; height:60px;">{{ article.short_description }}</textarea>
+    </div>
+    <div>
+        <label style="display:block; font-weight:bold; margin-bottom:5px;">Полный текст:</label>
+        <textarea name="content" required style="width:100%; padding:8px; height:150px;">{{ article.content }}</textarea>
+    </div>
+    <button type="submit" style="background:#28a745; color:white; padding:10px; border:none; cursor:pointer; font-weight:bold;">{{ action }}</button>
+</form>
+<br>
+<a href="{% url 'index' %}" style="color:#666;">Отмена</a>
+{% endblock %}

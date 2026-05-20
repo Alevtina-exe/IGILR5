@@ -1,0 +1,35 @@
+services:
+  - type: web
+    name: grand-cinema
+    runtime: python
+    repo: https://github.com/Alevtina-exe/IGILR5
+    branch: IGI_LR5
+    plan: free
+    region: frankfurt
+    rootDir: IGI/LR5
+    buildCommand: |
+      pip install -r requirements.txt
+      python manage.py migrate
+      python manage.py collectstatic --noinput
+      echo "from django.contrib.auth.models import User; User.objects.create_superuser('admin', 'admin@example.com', 'admin123') if not User.objects.filter(username='admin').exists() else None" | python manage.py shell
+    startCommand: gunicorn core.wsgi:application
+    envVars:
+      - key: DEBUG
+        value: "False"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: PYTHON_VERSION
+        value: 3.12.0
+      - key: ALLOWED_HOSTS
+        value: ".onrender.com"
+      - key: LOG_LEVEL
+        value: "INFO"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: grand-cinema-db
+          property: connectionString
+
+databases:
+  - name: grand-cinema-db
+    plan: free
+    region: frankfurt

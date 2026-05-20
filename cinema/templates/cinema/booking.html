@@ -1,0 +1,91 @@
+{% extends 'cinema/base.html' %}
+{% block content %}
+<div style="max-width: 900px; margin: 30px auto; font-family: sans-serif; padding: 10px;">
+    
+    <a href="{% url 'movie_detail' movie.id %}" style="text-decoration: none; color: #007bff;">&larr; Назад к описанию фильма</a>
+
+    <div style="background: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-top: 20px;">
+        <h2 style="margin-top: 0; color: #333;">Бронирование билета</h2>
+        <h3 style="color: #555; margin-bottom: 5px;">Фильм: {{ movie.title_ru }}</h3>
+        <p style="margin: 5px 0; color: #666;"><strong>Сеанс:</strong> {{ showtime.start_time|date:"d E Y в H:i" }} | <strong>Зал:</strong> {{ hall.name }}</p>
+        <p style="margin: 5px 0; color: #28a745; font-size: 18px;"><strong>Цена билета:</strong> {{ showtime.ticket_price }} BYN</p>
+        
+        <div style="width: 80%; height: 20px; background: #ccc; margin: 40px auto 20px auto; text-align: center; font-size: 12px; color: #666; line-height: 20px; border-radius: 0 0 15px 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+            ЭКРАН
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 10px; align-items: center; margin-top: 30px;">
+            {% for row in hall_structure %}
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="width: 60px; font-weight: bold; color: #888; font-size: 14px;">Ряд {{ row.row_number }}</span>
+                    
+                    <div style="display: flex; gap: 6px;">
+                        {% for seat in row.seats %}
+                            {% if seat.is_booked %}
+                                <div style="width: 32px; height: 32px; background: #dc3545; color: white; display: flex; align-items: center; justify-content: center; border-radius: 4px; font-size: 12px; font-weight: bold; cursor: not-allowed;" title="Место занято">
+                                    {{ seat.number }}
+                                </div>
+                            {% else %}
+                                <div class="seat-btn" 
+                                     data-row="{{ row.row_number }}" 
+                                     data-seat="{{ seat.number }}"
+                                     style="width: 32px; height: 32px; background: #e0e0e0; color: #333; display: flex; align-items: center; justify-content: center; border-radius: 4px; font-size: 12px; font-weight: bold; cursor: pointer; transition: all 0.2s;"
+                                     onclick="selectSeat(this, {{ row.row_number }}, {{ seat.number }})">
+                                    {{ seat.number }}
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+
+        <div style="display: flex; justify-content: center; gap: 20px; margin-top: 30px; font-size: 14px;">
+            <div style="display: flex; align-items: center; gap: 5px;"><div style="width: 16px; height: 16px; background: #e0e0e0; border-radius: 3px;"></div> Свободно</div>
+            <div style="display: flex; align-items: center; gap: 5px;"><div style="width: 16px; height: 16px; background: #28a745; border-radius: 3px;"></div> Выбрано</div>
+            <div style="display: flex; align-items: center; gap: 5px;"><div style="width: 16px; height: 16px; background: #dc3545; border-radius: 3px;"></div> Занято</div>
+        </div>
+
+        <form method="post" action="{% url 'book_ticket_action' showtime.id %}" style="margin-top: 40px; border-top: 1px solid #eee; padding-top: 20px; text-align: center;">
+            {% csrf_token %}
+            <input type="hidden" name="row" id="selected_row">
+            <input type="hidden" name="seat" id="selected_seat">
+            
+            <div id="selection_info" style="font-size: 16px; font-weight: bold; margin-bottom: 15px; color: #555;">
+                Пожалуйста, выберите место на схеме выше
+            </div>
+            
+            <button type="submit" id="submit_btn" disabled style="background: #6c757d; color: white; padding: 12px 30px; border: none; border-radius: 4px; font-size: 16px; font-weight: bold; cursor: not-allowed; transition: background 0.2s;">
+                Подтвердить бронирование
+            </button>
+        </form>
+    </div>
+</div>
+
+<script>
+function selectSeat(element, row, seat) {
+    // Сбрасываем стиль со всех ранее выбранных кнопок
+    document.querySelectorAll('.seat-btn').forEach(btn => {
+        btn.style.background = '#e0e0e0';
+        btn.style.color = '#333';
+    });
+    
+    // Красим текущее выбранное место в зеленый цвет
+    element.style.background = '#28a745';
+    element.style.color = 'white';
+    
+    // Записываем значения в скрытые инпуты формы
+    document.getElementById('selected_row').value = row;
+    document.getElementById('selected_seat').value = seat;
+    
+    // Обновляем информационный текст
+    document.getElementById('selection_info').innerHTML = `Выбрано место: <span style="color: #28a745;">Ряд ${row}, Место ${seat}</span>`;
+    
+    // Активируем кнопку подтверждения
+    const submitBtn = document.getElementById('submit_btn');
+    submitBtn.disabled = false;
+    submitBtn.style.background = '#28a745';
+    submitBtn.style.cursor = 'pointer';
+}
+</script>
+{% endblock %}

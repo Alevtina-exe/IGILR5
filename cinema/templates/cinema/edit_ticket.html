@@ -1,0 +1,80 @@
+{% extends 'cinema/base.html' %}
+{% block content %}
+<div style="max-width: 900px; margin: 30px auto; font-family: sans-serif; padding: 10px;">
+    
+    <a href="{% url 'profile' %}" style="text-decoration: none; color: #007bff;">&larr; Вернуться в личный кабинет</a>
+
+    <div style="background: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-top: 20px;">
+        <h2 style="margin-top: 0; color: #333;">Изменение мест в билете</h2>
+        <h3 style="color: #555; margin-bottom: 5px;">Фильм: {{ movie.title_ru }}</h3>
+        <p style="margin: 5px 0; color: #666;"><strong>Сеанс:</strong> {{ showtime.start_time|date:"d E Y в H:i" }} | <strong>Текущее место:</strong> Ряд {{ ticket.row }}, Место {{ ticket.seat }}</p>
+        
+        <div style="width: 80%; height: 20px; background: #ccc; margin: 40px auto 20px auto; text-align: center; font-size: 12px; color: #666; line-height: 20px; border-radius: 0 0 15px 15px;">
+            ЭКРАН
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 10px; align-items: center; margin-top: 30px;">
+            {% for row in hall_structure %}
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="width: 60px; font-weight: bold; color: #888; font-size: 14px;">Ряд {{ row.row_number }}</span>
+                    <div style="display: flex; gap: 6px;">
+                        {% for seat in row.seats %}
+                            {% if seat.is_booked %}
+                                <div style="width: 32px; height: 32px; background: #dc3545; color: white; display: flex; align-items: center; justify-content: center; border-radius: 4px; font-size: 12px; font-weight: bold; cursor: not-allowed;">
+                                    {{ seat.number }}
+                                </div>
+                            {% elif seat.is_current %}
+                                <div class="seat-btn" 
+                                     data-row="{{ row.row_number }}" 
+                                     data-seat="{{ seat.number }}"
+                                     style="width: 32px; height: 32px; background: #007bff; color: white; display: flex; align-items: center; justify-content: center; border-radius: 4px; font-size: 12px; font-weight: bold; cursor: pointer;"
+                                     onclick="selectSeat(this, {{ row.row_number }}, {{ seat.number }})">
+                                    {{ seat.number }}
+                                </div>
+                            {% else %}
+                                <div class="seat-btn" 
+                                     data-row="{{ row.row_number }}" 
+                                     data-seat="{{ seat.number }}"
+                                     style="width: 32px; height: 32px; background: #e0e0e0; color: #333; display: flex; align-items: center; justify-content: center; border-radius: 4px; font-size: 12px; font-weight: bold; cursor: pointer;"
+                                     onclick="selectSeat(this, {{ row.row_number }}, {{ seat.number }})">
+                                    {{ seat.number }}
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+
+        <form method="post" style="margin-top: 40px; border-top: 1px solid #eee; padding-top: 20px; text-align: center;">
+            {% csrf_token %}
+            <input type="hidden" name="row" id="selected_row" value="{{ ticket.row }}">
+            <input type="hidden" name="seat" id="selected_seat" value="{{ ticket.seat }}">
+            
+            <div id="selection_info" style="font-size: 16px; font-weight: bold; margin-bottom: 15px; color: #555;">
+                Вы можете оставить текущее место или кликнуть на любое свободное серое кресло
+            </div>
+            
+            <button type="submit" id="submit_btn" style="background: #007bff; color: white; padding: 12px 30px; border: none; border-radius: 4px; font-size: 16px; font-weight: bold; cursor: pointer;">
+                Сохранить новые места
+            </button>
+        </form>
+    </div>
+</div>
+
+<script>
+function selectSeat(element, row, seat) {
+    document.querySelectorAll('.seat-btn').forEach(btn => {
+        btn.style.background = '#e0e0e0';
+        btn.style.color = '#333';
+    });
+    
+    element.style.background = '#28a745';
+    element.style.color = 'white';
+    
+    document.getElementById('selected_row').value = row;
+    document.getElementById('selected_seat').value = seat;
+    document.getElementById('selection_info').innerHTML = `Выбрано новое место: <span style="color: #28a745;">Ряд ${row}, Место ${seat}</span>`;
+}
+</script>
+{% endblock %}

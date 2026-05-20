@@ -1,0 +1,96 @@
+{% extends 'cinema/base.html' %}
+
+{% block content %}
+<div style="max-width: 400px; margin: 50px auto; padding: 30px; border: 1px solid #e0e0e0; border-radius: 8px; background: #fff; box-shadow: 0 4px 6px rgba(0,0,0,0.05); font-family: sans-serif;">
+    <h2 style="text-align: center; margin-top: 0; color: #333; margin-bottom: 25px;">Создание аккаунта</h2>
+
+    <form method="post" enctype="multipart/form-data" style="display: flex; flex-direction: column; gap: 15px;">
+        {% csrf_token %}
+
+        {% for field in form %}
+            <div>
+                <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #555; font-size: 14px;">{{ field.label }}:</label>
+                {{ field }}
+                {% if field.errors %}
+                    <p style="color: red; font-size: 12px; margin: 5px 0 0 0;">{{ field.errors.as_text }}</p>
+                {% endif %}
+            </div>
+        {% endfor %}
+
+        <div>
+            <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #555; font-size: 14px;" for="id_first_name">Имя:</label>
+            <input type="text" name="first_name" id="id_first_name" required placeholder="Иван">
+        </div>
+
+        <div>
+            <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #555; font-size: 14px;" for="id_last_name">Фамилия:</label>
+            <input type="text" name="last_name" id="id_last_name" required placeholder="Иванов">
+        </div>
+
+        <div>
+            <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #555; font-size: 14px;" for="id_email">Электронная почта:</label>
+            <input type="email" name="email" id="id_email" required placeholder="example@mail.com">
+        </div>
+
+        <div>
+            <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #555; font-size: 14px;" for="id_phone">Номер телефона:</label>
+            <input type="text"
+                   name="phone"
+                   id="id_phone"
+                   required
+                   pattern="\+375 \((29|25|33|44)\) \d{3}-\d{2}-\d{2}"
+                   title="Формат должен быть строго: +375 (29) XXX-XX-XX"
+                   placeholder="+375 (29) 123-45-67">
+        </div>
+
+        <div>
+            <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #555; font-size: 14px;" for="id_age">Возраст:</label>
+            <input type="number" name="age" id="id_age" min="18" required>
+        </div>
+
+        <div>
+            <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #555; font-size: 14px;" for="id_photo">Фото профиля:</label>
+            <input type="file" name="photo" id="id_photo" accept="image/*" style="width: 100%; padding: 8px 0; font-size: 14px; box-sizing: border-box;">
+        </div>
+
+        <button type="submit" style="background: #007bff; color: white; padding: 12px; border: none; border-radius: 4px; font-weight: bold; font-size: 16px; cursor: pointer; margin-top: 10px;">
+            Создать аккаунт
+        </button>
+    </form>
+</div>
+
+<style>
+    form input[type="text"], form input[type="password"], form input[type="number"], form input[type="email"] {
+        width: 100%;
+        padding: 10px;
+        border-radius: 4px;
+        border: 1px solid #ccc;
+        font-size: 15px;
+        box-sizing: border-box;
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Исправили селектор: теперь скрипт точно видит input по его id="id_phone"
+    const phoneInput = document.getElementById('id_phone') || document.querySelector('input[name="phone"]');
+
+    if (phoneInput) {
+        phoneInput.placeholder = "+375 (XX) XXX-XX-XX";
+
+        phoneInput.addEventListener('input', function(e) {
+            let matrix = "+375 (__) ___-__-__",
+                i = 0,
+                def = matrix.replace(/\D/g, ""),
+                val = this.value.replace(/\D/g, "");
+
+            if (def.length >= val.length) val = def;
+
+            this.value = matrix.replace(/./g, function(a) {
+                return /[_\d]/.test(a) && i < val.length ? val.charAt(i++) : i >= val.length ? "" : a;
+            });
+        });
+    }
+});
+</script>
+{% endblock %}
