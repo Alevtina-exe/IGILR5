@@ -136,4 +136,6 @@ import os
 if not os.environ.get('DEBUG', 'False').lower() == 'true':
     pass
 
+CSRF_TRUSTED_ORIGINS = ['https://grand-cinema.onrender.com', 'https://*.onrender.com']
+
 
