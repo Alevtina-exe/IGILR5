@@ -124,5 +124,8 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 LOGIN_URL = 'login'
 
+import os
+if not os.environ.get('DEBUG', 'False').lower() == 'true':
+    pass
 
 
