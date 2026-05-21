@@ -69,19 +69,15 @@ function selectSeat(element, row, seat) {
         btn.style.background = '#e0e0e0';
         btn.style.color = '#333';
     });
-    
-    // Красим текущее выбранное место в зеленый цвет
+
     element.style.background = '#28a745';
     element.style.color = 'white';
-    
-    // Записываем значения в скрытые инпуты формы
+
     document.getElementById('selected_row').value = row;
     document.getElementById('selected_seat').value = seat;
-    
-    // Обновляем информационный текст
+
     document.getElementById('selection_info').innerHTML = `Выбрано место: <span style="color: #28a745;">Ряд ${row}, Место ${seat}</span>`;
-    
-    // Активируем кнопку подтверждения
+
     const submitBtn = document.getElementById('submit_btn');
     submitBtn.disabled = false;
     submitBtn.style.background = '#28a745';
