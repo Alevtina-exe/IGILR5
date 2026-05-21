@@ -1,5 +1,12 @@
+import logging
+import zoneinfo
+
 from django import forms
 from django.contrib import admin
+from django.contrib.auth.models import User
+from django.db.models.signals import post_save
+from django.utils import timezone
+
 from .models import *
 
 logger = logging.getLogger('cinema.admin')
@@ -9,7 +16,6 @@ UTC_TZ = zoneinfo.ZoneInfo("UTC")
 
 
 def format_minsk(dt):
-    """Форматирует дату в минском времени."""
     if not dt:
         return "-"
     if timezone.is_naive(dt):
@@ -18,7 +24,6 @@ def format_minsk(dt):
 
 
 def format_utc(dt):
-    """Форматирует дату в UTC."""
     if not dt:
         return "-"
     if timezone.is_naive(dt):
@@ -27,8 +32,6 @@ def format_utc(dt):
 
 
 class TimeStampedAdminMixin:
-    """Миксин для readonly полей дат с форматированием."""
-
     def get_readonly_fields(self, request, obj=None):
         readonly_fields = list(super().get_readonly_fields(request, obj))
         if hasattr(self.model, 'created_at_utc'):
@@ -74,8 +77,6 @@ class TimeStampedAdminMixin:
 
 
 class UserProfileAdminForm(forms.ModelForm):
-    """Форма создания и редактирования профиля пользователя."""
-
     username = forms.CharField(label="Имя пользователя (Логин)", max_length=150)
     email = forms.EmailField(label="Электронная почта", required=False)
     first_name = forms.CharField(label="Имя", max_length=150, required=False)
@@ -125,8 +126,6 @@ class UserProfileAdminForm(forms.ModelForm):
 
 @admin.register(UserProfile)
 class UserProfileAdmin(TimeStampedAdminMixin, admin.ModelAdmin):
-    """Админ-панель профилей пользователей."""
-
     form = UserProfileAdminForm
     list_display = ('get_username', 'get_email', 'phone', 'age', 'display_created')
     search_fields = ('user__username', 'user__email', 'phone')
@@ -176,7 +175,7 @@ class UserProfileAdmin(TimeStampedAdminMixin, admin.ModelAdmin):
                     is_superuser=is_superuser,
                 )
                 obj.user = user
-                logger.info(f"Администратор {request.user.username}: создан новый профиль: {username} (staff={is_staff}, superuser={is_superuser})")
+                logger.info(f"Администратор {request.user.username}: создан новый профиль: {username}")
             except Exception as e:
                 logger.error(f"Ошибка создания пользователя {username}: {e}", exc_info=True)
                 raise
@@ -225,8 +224,6 @@ class UserProfileAdmin(TimeStampedAdminMixin, admin.ModelAdmin):
 
 @admin.register(NewsArticle)
 class NewsArticleAdmin(TimeStampedAdminMixin, admin.ModelAdmin):
-    """Админ-панель новостей."""
-
     list_display = ('title', 'display_created')
     search_fields = ('title',)
     fieldsets = (
@@ -250,8 +247,6 @@ class NewsArticleAdmin(TimeStampedAdminMixin, admin.ModelAdmin):
 
 @admin.register(Review)
 class ReviewAdmin(TimeStampedAdminMixin, admin.ModelAdmin):
-    """Админ-панель отзывов."""
-
     list_display = ('user', 'rating', 'display_created')
     search_fields = ('user__username', 'text')
     list_filter = ('rating',)
@@ -276,8 +271,6 @@ class ReviewAdmin(TimeStampedAdminMixin, admin.ModelAdmin):
 
 @admin.register(Ticket)
 class TicketAdmin(TimeStampedAdminMixin, admin.ModelAdmin):
-    """Админ-панель билетов."""
-
     list_display = ('id', 'showtime', 'customer', 'row', 'seat', 'display_created')
     search_fields = ('customer__username', 'showtime__movie__title_ru')
     list_filter = ('showtime',)
@@ -302,8 +295,6 @@ class TicketAdmin(TimeStampedAdminMixin, admin.ModelAdmin):
 
 @admin.register(PromoCode)
 class PromoCodeAdmin(TimeStampedAdminMixin, admin.ModelAdmin):
-    """Админ-панель промокодов."""
-
     list_display = ('code', 'is_active', 'display_created')
     search_fields = ('code', 'description')
     list_filter = ('is_active',)
@@ -328,8 +319,6 @@ class PromoCodeAdmin(TimeStampedAdminMixin, admin.ModelAdmin):
 
 @admin.register(Movie)
 class MovieAdmin(TimeStampedAdminMixin, admin.ModelAdmin):
-    """Админ-панель фильмов."""
-
     list_display = ('title_ru', 'title_en', 'duration', 'rating', 'display_created')
     search_fields = ('title_ru', 'title_en')
     list_filter = ('genres', 'countries')
@@ -358,8 +347,6 @@ class MovieAdmin(TimeStampedAdminMixin, admin.ModelAdmin):
 
 @admin.register(Showtime)
 class ShowtimeAdmin(TimeStampedAdminMixin, admin.ModelAdmin):
-    """Админ-панель сеансов."""
-
     list_display = ('movie', 'hall', 'start_time', 'ticket_price', 'display_created')
     search_fields = ('movie__title_ru', 'hall__name')
     list_filter = ('hall', 'start_time')
@@ -384,8 +371,6 @@ class ShowtimeAdmin(TimeStampedAdminMixin, admin.ModelAdmin):
 
 @admin.register(CinemaHall)
 class CinemaHallAdmin(TimeStampedAdminMixin, admin.ModelAdmin):
-    """Админ-панель кинозалов."""
-
     list_display = ('name', 'rows_count', 'seats_per_row', 'capacity', 'display_created')
     fieldsets = (
         ('Информация о зале', {'fields': ('name', 'rows_count', 'seats_per_row', 'capacity')}),
@@ -409,8 +394,6 @@ class CinemaHallAdmin(TimeStampedAdminMixin, admin.ModelAdmin):
 
 @admin.register(ContactEmployee)
 class ContactEmployeeAdmin(TimeStampedAdminMixin, admin.ModelAdmin):
-    """Админ-панель контактов сотрудников."""
-
     list_display = ('display_full_name', 'position', 'display_email', 'display_phone', 'is_visible', 'display_created')
     search_fields = ('user__username', 'user__first_name', 'user__last_name', 'position', 'user__email')
     list_filter = ('is_visible', 'position')
@@ -455,8 +438,6 @@ class ContactEmployeeAdmin(TimeStampedAdminMixin, admin.ModelAdmin):
 
 @admin.register(JobVacancy)
 class JobVacancyAdmin(TimeStampedAdminMixin, admin.ModelAdmin):
-    """Админ-панель вакансий."""
-
     list_display = ('title', 'salary', 'is_active', 'display_created')
     search_fields = ('title', 'description')
     list_filter = ('is_active',)
@@ -481,8 +462,6 @@ class JobVacancyAdmin(TimeStampedAdminMixin, admin.ModelAdmin):
 
 @admin.register(AboutCompany, PrivacyPolicy, Country, Genre, FAQItem)
 class GeneralAdmin(TimeStampedAdminMixin, admin.ModelAdmin):
-    """Общая админ-панель для простых моделей."""
-
     def save_model(self, request, obj, form, change):
         action = "обновлен(а)" if change else "создан(а)"
         super().save_model(request, obj, form, change)
