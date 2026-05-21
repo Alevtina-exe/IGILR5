@@ -17,7 +17,7 @@ def format_local(dt):
     if not dt:
         return "-"
     if timezone.is_naive(dt):
-        dt = timezone.make_aware(dt, timezone.get_default_timezone())
+        dt = timezone.make_aware(dt, timezone.localtime().tzinfo)
     return dt.strftime("%d/%m/%Y %H:%M:%S")
 
 
