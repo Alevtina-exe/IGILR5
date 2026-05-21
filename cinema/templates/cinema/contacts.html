@@ -38,18 +38,18 @@
     <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px;">
         {% for employee in employees %}
             <div style="background: white; border: 1px solid #e0e0e0; border-radius: 8px; padding: 15px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
-                {% if employee.photo %}
-                    <img src="{{ employee.photo.url }}" alt="{{ employee.full_name }}" style="width: 100px; height: 100px; object-fit: cover; border-radius: 50%; margin-bottom: 15px; border: 2px solid #007bff;">
+                {% if employee.get_photo %}
+                    <img src="{{ employee.get_photo.url }}" alt="{{ employee.get_full_name }}" style="width: 100px; height: 100px; object-fit: cover; border-radius: 50%; margin-bottom: 15px; border: 2px solid #007bff;">
                 {% else %}
                     <div style="width: 100px; height: 100px; background: #eee; border-radius: 50%; line-height: 100px; margin: 0 auto 15px auto; color: #aaa; font-size: 40px;">👤</div>
                 {% endif %}
 
-                <h4 style="margin: 0 0 5px 0; color: #111; font-size: 16px;">{{ employee.full_name }}</h4>
+                <h4 style="margin: 0 0 5px 0; color: #111; font-size: 16px;">{{ employee.get_full_name }}</h4>
                 <p style="margin: 0 0 10px 0; color: #007bff; font-size: 13px; font-weight: bold; text-transform: uppercase;">{{ employee.position }}</p>
 
                 <div style="text-align: left; font-size: 12px; color: #555; border-top: 1px solid #f0f0f0; padding-top: 10px; display: flex; flex-direction: column; gap: 5px;">
-                    <span><strong>📞 Тел:</strong> {{ employee.phone }}</span>
-                    <span><strong>✉️ Email:</strong> {{ employee.email }}</span>
+                    <span><strong>📞 Тел:</strong> {{ employee.get_phone }}</span>
+                    <span><strong>✉️ Email:</strong> {{ employee.get_email }}</span>
                 </div>
             </div>
         {% empty %}

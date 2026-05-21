@@ -36,42 +36,18 @@ class TimeStampedAdminMixin:
         readonly_fields = list(super().get_readonly_fields(request, obj))
         if hasattr(self.model, 'created_at_utc'):
             readonly_fields.extend([
-                'display_created_utc_widget',
-                'display_created_minsk_widget',
-                'display_updated_utc_widget',
-                'display_updated_minsk_widget'
+                'created_at_utc',
+                'created_at_local',
+                'updated_at_utc',
+                'updated_at_local',
             ])
         return readonly_fields
-
-    def display_created_utc_widget(self, obj):
-        if obj and obj.created_at_utc:
-            return format_utc(obj.created_at_utc)
-        return "-"
-
-    def display_created_minsk_widget(self, obj):
-        if obj and obj.created_at_local:
-            return format_minsk(obj.created_at_local)
-        return "-"
-
-    def display_updated_utc_widget(self, obj):
-        if obj and obj.updated_at_utc:
-            return format_utc(obj.updated_at_utc)
-        return "-"
-
-    def display_updated_minsk_widget(self, obj):
-        if obj and obj.updated_at_local:
-            return format_minsk(obj.updated_at_local)
-        return "-"
 
     def display_created(self, obj):
         if hasattr(obj, 'created_at_local') and obj.created_at_local:
             return format_minsk(obj.created_at_local)
         return "-"
 
-    display_created_utc_widget.short_description = "Дата создания (UTC)"
-    display_created_minsk_widget.short_description = "Дата создания (Минск)"
-    display_updated_utc_widget.short_description = "Дата изменения (UTC)"
-    display_updated_minsk_widget.short_description = "Дата изменения (Минск)"
     display_created.short_description = "Дата создания"
     display_created.admin_order_field = 'created_at_local'
 
@@ -135,8 +111,7 @@ class UserProfileAdmin(TimeStampedAdminMixin, admin.ModelAdmin):
         ('Личные данные', {'fields': ('photo', 'age', 'phone')}),
         ('Права доступа', {'fields': ('is_active', 'is_staff', 'is_superuser')}),
         ('Даты создания и изменения', {
-            'fields': ('display_created_minsk_widget', 'display_created_utc_widget',
-                       'display_updated_minsk_widget', 'display_updated_utc_widget'),
+            'fields': ('created_at_utc', 'created_at_local', 'updated_at_utc', 'updated_at_local'),
             'classes': ('collapse',)
         }),
     )
@@ -229,8 +204,7 @@ class NewsArticleAdmin(TimeStampedAdminMixin, admin.ModelAdmin):
     fieldsets = (
         ('Основная информация', {'fields': ('title', 'short_description', 'content', 'image')}),
         ('Даты создания и изменения', {
-            'fields': ('display_created_minsk_widget', 'display_created_utc_widget',
-                       'display_updated_minsk_widget', 'display_updated_utc_widget'),
+            'fields': ('created_at_utc', 'created_at_local', 'updated_at_utc', 'updated_at_local'),
             'classes': ('collapse',)
         }),
     )
@@ -253,8 +227,7 @@ class ReviewAdmin(TimeStampedAdminMixin, admin.ModelAdmin):
     fieldsets = (
         ('Информация об отзыве', {'fields': ('user', 'rating', 'text')}),
         ('Даты создания и изменения', {
-            'fields': ('display_created_minsk_widget', 'display_created_utc_widget',
-                       'display_updated_minsk_widget', 'display_updated_utc_widget'),
+            'fields': ('created_at_utc', 'created_at_local', 'updated_at_utc', 'updated_at_local'),
             'classes': ('collapse',)
         }),
     )
@@ -277,8 +250,7 @@ class TicketAdmin(TimeStampedAdminMixin, admin.ModelAdmin):
     fieldsets = (
         ('Информация о билете', {'fields': ('showtime', 'customer', 'row', 'seat')}),
         ('Даты создания и изменения', {
-            'fields': ('display_created_minsk_widget', 'display_created_utc_widget',
-                       'display_updated_minsk_widget', 'display_updated_utc_widget'),
+            'fields': ('created_at_utc', 'created_at_local', 'updated_at_utc', 'updated_at_local'),
             'classes': ('collapse',)
         }),
     )
@@ -301,8 +273,7 @@ class PromoCodeAdmin(TimeStampedAdminMixin, admin.ModelAdmin):
     fieldsets = (
         ('Информация о промокоде', {'fields': ('code', 'description', 'is_active')}),
         ('Даты создания и изменения', {
-            'fields': ('display_created_minsk_widget', 'display_created_utc_widget',
-                       'display_updated_minsk_widget', 'display_updated_utc_widget'),
+            'fields': ('created_at_utc', 'created_at_local', 'updated_at_utc', 'updated_at_local'),
             'classes': ('collapse',)
         }),
     )
@@ -329,8 +300,7 @@ class MovieAdmin(TimeStampedAdminMixin, admin.ModelAdmin):
         }),
         ('Категории', {'fields': ('genres', 'countries')}),
         ('Даты создания и изменения', {
-            'fields': ('display_created_minsk_widget', 'display_created_utc_widget',
-                       'display_updated_minsk_widget', 'display_updated_utc_widget'),
+            'fields': ('created_at_utc', 'created_at_local', 'updated_at_utc', 'updated_at_local'),
             'classes': ('collapse',)
         }),
     )
@@ -353,8 +323,7 @@ class ShowtimeAdmin(TimeStampedAdminMixin, admin.ModelAdmin):
     fieldsets = (
         ('Информация о сеансе', {'fields': ('movie', 'hall', 'start_time', 'ticket_price')}),
         ('Даты создания и изменения', {
-            'fields': ('display_created_minsk_widget', 'display_created_utc_widget',
-                       'display_updated_minsk_widget', 'display_updated_utc_widget'),
+            'fields': ('created_at_utc', 'created_at_local', 'updated_at_utc', 'updated_at_local'),
             'classes': ('collapse',)
         }),
     )
@@ -375,8 +344,7 @@ class CinemaHallAdmin(TimeStampedAdminMixin, admin.ModelAdmin):
     fieldsets = (
         ('Информация о зале', {'fields': ('name', 'rows_count', 'seats_per_row', 'capacity')}),
         ('Даты создания и изменения', {
-            'fields': ('display_created_minsk_widget', 'display_created_utc_widget',
-                       'display_updated_minsk_widget', 'display_updated_utc_widget'),
+            'fields': ('created_at_utc', 'created_at_local', 'updated_at_utc', 'updated_at_local'),
             'classes': ('collapse',)
         }),
     )
@@ -405,8 +373,7 @@ class ContactEmployeeAdmin(TimeStampedAdminMixin, admin.ModelAdmin):
         }),
         ('Дополнительно', {'fields': ('description',)}),
         ('Даты создания и изменения', {
-            'fields': ('display_created_minsk_widget', 'display_created_utc_widget',
-                       'display_updated_minsk_widget', 'display_updated_utc_widget'),
+            'fields': ('created_at_utc', 'created_at_local', 'updated_at_utc', 'updated_at_local'),
             'classes': ('collapse',)
         }),
     )
@@ -444,8 +411,7 @@ class JobVacancyAdmin(TimeStampedAdminMixin, admin.ModelAdmin):
     fieldsets = (
         ('Информация о вакансии', {'fields': ('title', 'description', 'salary', 'is_active')}),
         ('Даты создания и изменения', {
-            'fields': ('display_created_minsk_widget', 'display_created_utc_widget',
-                       'display_updated_minsk_widget', 'display_updated_utc_widget'),
+            'fields': ('created_at_utc', 'created_at_local', 'updated_at_utc', 'updated_at_local'),
             'classes': ('collapse',)
         }),
     )

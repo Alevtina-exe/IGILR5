@@ -1,0 +1,34 @@
+{% extends 'cinema/base.html' %}
+{% block content %}
+<div style="max-width: 800px; margin: 0 auto; padding: 20px;">
+    <h2 style="text-align: center; margin-bottom: 30px;">Промокоды и акции</h2>
+    
+    {% if active_promos %}
+        <h3 style="color: #28a745; margin-bottom: 15px;">🟢 Действующие промокоды</h3>
+        <div style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 40px;">
+            {% for promo in active_promos %}
+                <div style="background: #d4edda; border: 1px solid #c3e6cb; border-radius: 8px; padding: 20px;">
+                    <h4 style="margin: 0 0 10px 0; font-size: 20px; color: #155724;">{{ promo.code }}</h4>
+                    <p style="margin: 0; color: #155724;">{{ promo.description }}</p>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+    
+    {% if archived_promos %}
+        <h3 style="color: #6c757d; margin-bottom: 15px;">⚫ Архивные промокоды</h3>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+            {% for promo in archived_promos %}
+                <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 15px; opacity: 0.7;">
+                    <h4 style="margin: 0 0 5px 0; font-size: 16px; color: #6c757d;">{{ promo.code }}</h4>
+                    <p style="margin: 0; color: #6c757d; font-size: 14px;">{{ promo.description }}</p>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+    
+    {% if not active_promos and not archived_promos %}
+        <p style="text-align: center; color: #777;">Промокодов пока нет.</p>
+    {% endif %}
+</div>
+{% endblock %}

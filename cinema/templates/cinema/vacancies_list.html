@@ -1,0 +1,20 @@
+{% extends 'cinema/base.html' %}
+{% block content %}
+<div style="max-width: 800px; margin: 0 auto; padding: 20px;">
+    <h2 style="text-align: center; margin-bottom: 30px;">Вакансии</h2>
+    
+    <div style="display: flex; flex-direction: column; gap: 20px;">
+        {% for vacancy in vacancies %}
+            <div style="background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px;">
+                <h3 style="margin: 0 0 10px 0; color: #111;">{{ vacancy.title }}</h3>
+                {% if vacancy.salary %}
+                    <p style="color: #28a745; font-weight: bold; font-size: 16px;">{{ vacancy.salary }} BYN</p>
+                {% endif %}
+                <p style="color: #555; line-height: 1.6;">{{ vacancy.description }}</p>
+            </div>
+        {% empty %}
+            <p style="text-align: center; color: #777;">Открытых вакансий нет.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

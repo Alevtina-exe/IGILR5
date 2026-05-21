@@ -1,0 +1,14 @@
+{% extends 'cinema/base.html' %}
+{% block content %}
+<div style="max-width: 800px; margin: 0 auto; padding: 20px;">
+    <h2 style="text-align: center; margin-bottom: 30px;">{{ policy.title|default:"Политика конфиденциальности" }}</h2>
+    
+    <div style="background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 30px; line-height: 1.8; color: #333;">
+        {% if policy and policy.content %}
+            {{ policy.content|linebreaks }}
+        {% else %}
+            <p style="text-align: center; color: #777;">Политика конфиденциальности находится в разработке.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

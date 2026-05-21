@@ -772,3 +772,37 @@ def showtime_delete_view(request, showtime_id):
         'showtime': showtime,
         'tickets_count': tickets_count,
     })
+
+
+def news_list_view(request):
+    """Страница со списком всех новостей."""
+    news = NewsArticle.objects.all().order_by('-created_at_utc')
+    return render(request, 'cinema/news_list.html', {'news': news})
+
+
+def faq_list_view(request):
+    """Страница с часто задаваемыми вопросами."""
+    faqs = FAQItem.objects.all()
+    return render(request, 'cinema/faq_list.html', {'faqs': faqs})
+
+
+def vacancies_list_view(request):
+    """Страница с вакансиями."""
+    vacancies = JobVacancy.objects.filter(is_active=True)
+    return render(request, 'cinema/vacancies_list.html', {'vacancies': vacancies})
+
+
+def privacy_policy_view(request):
+    """Страница политики конфиденциальности."""
+    policy = PrivacyPolicy.objects.first()
+    return render(request, 'cinema/privacy_policy.html', {'policy': policy})
+
+
+def promocodes_list_view(request):
+    """Страница с промокодами."""
+    active_promos = PromoCode.objects.filter(is_active=True)
+    archived_promos = PromoCode.objects.filter(is_active=False)
+    return render(request, 'cinema/promocodes_list.html', {
+        'active_promos': active_promos,
+        'archived_promos': archived_promos,
+    })
