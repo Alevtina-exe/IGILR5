@@ -7,28 +7,26 @@ from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.utils import timezone
 
+from core import settings
 from .models import *
 
 logger = logging.getLogger('cinema.admin')
 
-MINSK_TZ = zoneinfo.ZoneInfo("Europe/Minsk")
-UTC_TZ = zoneinfo.ZoneInfo("UTC")
 
-
-def format_minsk(dt):
+def format_local(dt):
     if not dt:
         return "-"
     if timezone.is_naive(dt):
-        dt = timezone.make_aware(dt, UTC_TZ)
-    return dt.astimezone(MINSK_TZ).strftime("%d/%m/%Y %H:%M:%S")
+        dt = timezone.make_aware(dt, timezone.get_default_timezone())
+    return dt.strftime("%d/%m/%Y %H:%M:%S")
 
 
 def format_utc(dt):
     if not dt:
         return "-"
     if timezone.is_naive(dt):
-        dt = timezone.make_aware(dt, UTC_TZ)
-    return dt.astimezone(UTC_TZ).strftime("%d/%m/%Y %H:%M:%S UTC")
+        dt = timezone.make_aware(dt, timezone.utc)
+    return dt.strftime("%d/%m/%Y %H:%M:%S UTC")
 
 
 class TimeStampedAdminMixin:
@@ -36,18 +34,42 @@ class TimeStampedAdminMixin:
         readonly_fields = list(super().get_readonly_fields(request, obj))
         if hasattr(self.model, 'created_at_utc'):
             readonly_fields.extend([
-                'created_at_utc',
-                'created_at_local',
-                'updated_at_utc',
-                'updated_at_local',
+                'created_at_local_formatted',
+                'created_at_utc_formatted',
+                'updated_at_local_formatted',
+                'updated_at_utc_formatted',
             ])
         return readonly_fields
 
-    def display_created(self, obj):
-        if hasattr(obj, 'created_at_local') and obj.created_at_local:
-            return format_minsk(obj.created_at_local)
+    def created_at_local_formatted(self, obj):
+        if obj and obj.created_at_local:
+            return format_local(obj.created_at_local)
         return "-"
 
+    def created_at_utc_formatted(self, obj):
+        if obj and obj.created_at_utc:
+            return format_utc(obj.created_at_utc)
+        return "-"
+
+    def updated_at_local_formatted(self, obj):
+        if obj and obj.updated_at_local:
+            return format_local(obj.updated_at_local)
+        return "-"
+
+    def updated_at_utc_formatted(self, obj):
+        if obj and obj.updated_at_utc:
+            return format_utc(obj.updated_at_utc)
+        return "-"
+
+    def display_created(self, obj):
+        if hasattr(obj, 'created_at_local') and obj.created_at_local:
+            return format_local(obj.created_at_local)
+        return "-"
+
+    created_at_local_formatted.short_description = "Дата создания (Минск)"
+    created_at_utc_formatted.short_description = "Дата создания (UTC)"
+    updated_at_local_formatted.short_description = "Дата изменения (Минск)"
+    updated_at_utc_formatted.short_description = "Дата изменения (UTC)"
     display_created.short_description = "Дата создания"
     display_created.admin_order_field = 'created_at_local'
 
@@ -111,7 +133,8 @@ class UserProfileAdmin(TimeStampedAdminMixin, admin.ModelAdmin):
         ('Личные данные', {'fields': ('photo', 'age', 'phone')}),
         ('Права доступа', {'fields': ('is_active', 'is_staff', 'is_superuser')}),
         ('Даты создания и изменения', {
-            'fields': ('created_at_utc', 'created_at_local', 'updated_at_utc', 'updated_at_local'),
+            'fields': ('created_at_local_formatted', 'created_at_utc_formatted',
+                       'updated_at_local_formatted', 'updated_at_utc_formatted'),
             'classes': ('collapse',)
         }),
     )
@@ -178,13 +201,13 @@ class UserProfileAdmin(TimeStampedAdminMixin, admin.ModelAdmin):
 
     def get_date_joined(self, obj):
         try:
-            return format_minsk(obj.user.date_joined)
+            return format_local(obj.user.date_joined)
         except User.DoesNotExist:
             return "—"
 
     def get_last_login(self, obj):
         try:
-            return format_minsk(obj.user.last_login)
+            return format_local(obj.user.last_login)
         except User.DoesNotExist:
             return "—"
 
@@ -204,7 +227,8 @@ class NewsArticleAdmin(TimeStampedAdminMixin, admin.ModelAdmin):
     fieldsets = (
         ('Основная информация', {'fields': ('title', 'short_description', 'content', 'image')}),
         ('Даты создания и изменения', {
-            'fields': ('created_at_utc', 'created_at_local', 'updated_at_utc', 'updated_at_local'),
+            'fields': ('created_at_local_formatted', 'created_at_utc_formatted',
+                       'updated_at_local_formatted', 'updated_at_utc_formatted'),
             'classes': ('collapse',)
         }),
     )
@@ -227,7 +251,8 @@ class ReviewAdmin(TimeStampedAdminMixin, admin.ModelAdmin):
     fieldsets = (
         ('Информация об отзыве', {'fields': ('user', 'rating', 'text')}),
         ('Даты создания и изменения', {
-            'fields': ('created_at_utc', 'created_at_local', 'updated_at_utc', 'updated_at_local'),
+            'fields': ('created_at_local_formatted', 'created_at_utc_formatted',
+                       'updated_at_local_formatted', 'updated_at_utc_formatted'),
             'classes': ('collapse',)
         }),
     )
@@ -250,7 +275,8 @@ class TicketAdmin(TimeStampedAdminMixin, admin.ModelAdmin):
     fieldsets = (
         ('Информация о билете', {'fields': ('showtime', 'customer', 'row', 'seat')}),
         ('Даты создания и изменения', {
-            'fields': ('created_at_utc', 'created_at_local', 'updated_at_utc', 'updated_at_local'),
+            'fields': ('created_at_local_formatted', 'created_at_utc_formatted',
+                       'updated_at_local_formatted', 'updated_at_utc_formatted'),
             'classes': ('collapse',)
         }),
     )
@@ -273,7 +299,8 @@ class PromoCodeAdmin(TimeStampedAdminMixin, admin.ModelAdmin):
     fieldsets = (
         ('Информация о промокоде', {'fields': ('code', 'description', 'is_active')}),
         ('Даты создания и изменения', {
-            'fields': ('created_at_utc', 'created_at_local', 'updated_at_utc', 'updated_at_local'),
+            'fields': ('created_at_local_formatted', 'created_at_utc_formatted',
+                       'updated_at_local_formatted', 'updated_at_utc_formatted'),
             'classes': ('collapse',)
         }),
     )
@@ -300,7 +327,8 @@ class MovieAdmin(TimeStampedAdminMixin, admin.ModelAdmin):
         }),
         ('Категории', {'fields': ('genres', 'countries')}),
         ('Даты создания и изменения', {
-            'fields': ('created_at_utc', 'created_at_local', 'updated_at_utc', 'updated_at_local'),
+            'fields': ('created_at_local_formatted', 'created_at_utc_formatted',
+                       'updated_at_local_formatted', 'updated_at_utc_formatted'),
             'classes': ('collapse',)
         }),
     )
@@ -323,7 +351,8 @@ class ShowtimeAdmin(TimeStampedAdminMixin, admin.ModelAdmin):
     fieldsets = (
         ('Информация о сеансе', {'fields': ('movie', 'hall', 'start_time', 'ticket_price')}),
         ('Даты создания и изменения', {
-            'fields': ('created_at_utc', 'created_at_local', 'updated_at_utc', 'updated_at_local'),
+            'fields': ('created_at_local_formatted', 'created_at_utc_formatted',
+                       'updated_at_local_formatted', 'updated_at_utc_formatted'),
             'classes': ('collapse',)
         }),
     )
@@ -344,7 +373,8 @@ class CinemaHallAdmin(TimeStampedAdminMixin, admin.ModelAdmin):
     fieldsets = (
         ('Информация о зале', {'fields': ('name', 'rows_count', 'seats_per_row', 'capacity')}),
         ('Даты создания и изменения', {
-            'fields': ('created_at_utc', 'created_at_local', 'updated_at_utc', 'updated_at_local'),
+            'fields': ('created_at_local_formatted', 'created_at_utc_formatted',
+                       'updated_at_local_formatted', 'updated_at_utc_formatted'),
             'classes': ('collapse',)
         }),
     )
@@ -373,7 +403,8 @@ class ContactEmployeeAdmin(TimeStampedAdminMixin, admin.ModelAdmin):
         }),
         ('Дополнительно', {'fields': ('description',)}),
         ('Даты создания и изменения', {
-            'fields': ('created_at_utc', 'created_at_local', 'updated_at_utc', 'updated_at_local'),
+            'fields': ('created_at_local_formatted', 'created_at_utc_formatted',
+                       'updated_at_local_formatted', 'updated_at_utc_formatted'),
             'classes': ('collapse',)
         }),
     )
@@ -411,7 +442,8 @@ class JobVacancyAdmin(TimeStampedAdminMixin, admin.ModelAdmin):
     fieldsets = (
         ('Информация о вакансии', {'fields': ('title', 'description', 'salary', 'is_active')}),
         ('Даты создания и изменения', {
-            'fields': ('created_at_utc', 'created_at_local', 'updated_at_utc', 'updated_at_local'),
+            'fields': ('created_at_local_formatted', 'created_at_utc_formatted',
+                       'updated_at_local_formatted', 'updated_at_utc_formatted'),
             'classes': ('collapse',)
         }),
     )
