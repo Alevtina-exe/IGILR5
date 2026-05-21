@@ -1,20 +1,28 @@
 {% extends 'cinema/base.html' %}
 {% block content %}
 <h2>{{ action }} новость</h2>
-<form method="POST" style="max-width: 600px; display: flex; flex-direction: column; gap: 15px;">
+<form method="POST" enctype="multipart/form-data" style="max-width: 600px; display: flex; flex-direction: column; gap: 15px;">
     {% csrf_token %}
     <div>
         <label style="display:block; font-weight:bold; margin-bottom:5px;">Заголовок:</label>
-        <input type="text" name="title" value="{{ article.title }}" required style="width:100%; padding:8px;">
+        <input type="text" name="title" value="{{ article.title|default:'' }}" required style="width:100%; padding:8px;">
     </div>
     <div>
         <label style="display:block; font-weight:bold; margin-bottom:5px;">Краткое описание:</label>
-        <textarea name="short_description" required style="width:100%; padding:8px; height:60px;">{{ article.short_description }}</textarea>
+        <textarea name="short_description" required style="width:100%; padding:8px; height:60px;">{{ article.short_description|default:'' }}</textarea>
     </div>
     <div>
         <label style="display:block; font-weight:bold; margin-bottom:5px;">Полный текст:</label>
-        <textarea name="content" required style="width:100%; padding:8px; height:150px;">{{ article.content }}</textarea>
+        <textarea name="content" required style="width:100%; padding:8px; height:150px;">{{ article.content|default:'' }}</textarea>
     </div>
+    <div>
+        <label style="display:block; font-weight:bold; margin-bottom:5px;">Изображение:</label>
+        {% if article.image %}
+            <img src="{{ article.image.url }}" style="max-width: 200px; display: block; margin-bottom: 10px;">
+        {% endif %}
+        <input type="file" name="image" accept="image/*" style="width:100%; padding:8px;">
+    </div>
+
     <button type="submit" style="background:#28a745; color:white; padding:10px; border:none; cursor:pointer; font-weight:bold;">{{ action }}</button>
 </form>
 <br>
