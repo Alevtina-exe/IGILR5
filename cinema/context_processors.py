@@ -1,6 +1,7 @@
 import calendar
 from datetime import datetime
 import zoneinfo
+from .views import get_random_fact
 
 def footer_info_processor(request):
     user_tz_name = "Europe/Minsk"
@@ -11,4 +12,5 @@ def footer_info_processor(request):
         'footer_user_tz': user_tz_name,
         'footer_current_date': user_now.strftime("%d/%m/%Y"),
         'footer_text_calendar': text_cal,
+        'random_fact': get_random_fact(),
     }

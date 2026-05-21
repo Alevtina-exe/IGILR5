@@ -806,3 +806,14 @@ def promocodes_list_view(request):
         'active_promos': active_promos,
         'archived_promos': archived_promos,
     })
+
+
+def get_random_fact():
+    """Получает случайный факт из API."""
+    try:
+        response = requests.get('https://uselessfacts.jsph.pl/api/v2/facts/random?language=en', timeout=3)
+        if response.status_code == 200:
+            return response.json().get('text', 'Интересный факт не найден')
+    except requests.RequestException:
+        pass
+    return 'Кино — это искусство, которое объединяет миллионы людей по всему миру.'
