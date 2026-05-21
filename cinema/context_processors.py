@@ -2,6 +2,7 @@ import calendar
 from datetime import datetime
 import zoneinfo
 from .views import get_random_fact
+from django.conf import settings
 
 def footer_info_processor(request):
     user_tz_name = "Europe/Minsk"
@@ -13,4 +14,5 @@ def footer_info_processor(request):
         'footer_current_date': user_now.strftime("%d/%m/%Y"),
         'footer_text_calendar': text_cal,
         'random_fact': get_random_fact(),
+        'user_tz_name': settings.TIME_ZONE,
     }
