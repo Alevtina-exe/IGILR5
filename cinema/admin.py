@@ -1,91 +1,69 @@
-import logging
-import zoneinfo
+import re
 
 from django import forms
 from django.contrib import admin
-from django.contrib.auth.models import User
-from django.db.models.signals import post_save
-from django.utils import timezone
 
-from core import settings
 from .models import *
 
 logger = logging.getLogger('cinema.admin')
 
 
 def format_local(dt):
-    if not dt:
-        return "-"
+    if not dt: return "-"
     if timezone.is_naive(dt):
-        dt = timezone.make_aware(dt, timezone.localtime().tzinfo)
-    return dt.strftime("%d/%m/%Y %H:%M:%S")
-
+        dt = timezone.make_aware(dt, timezone.get_default_timezone())
+    return dt.astimezone(timezone.get_default_timezone()).strftime("%d/%m/%Y %H:%M:%S")
 
 def format_utc(dt):
-    if not dt:
-        return "-"
+    if not dt: return "-"
     if timezone.is_naive(dt):
         dt = timezone.make_aware(dt, timezone.utc)
-    return dt.strftime("%d/%m/%Y %H:%M:%S UTC")
+    return dt.astimezone(timezone.utc).strftime("%d/%m/%Y %H:%M:%S UTC")
 
 
 class TimeStampedAdminMixin:
     def get_readonly_fields(self, request, obj=None):
         readonly_fields = list(super().get_readonly_fields(request, obj))
-        if hasattr(self.model, 'created_at_utc'):
-            readonly_fields.extend([
-                'created_at_local_formatted',
-                'created_at_utc_formatted',
-                'updated_at_local_formatted',
-                'updated_at_utc_formatted',
-            ])
+        readonly_fields.extend(['created_local', 'updated_local'])
         return readonly_fields
 
-    def created_at_local_formatted(self, obj):
-        if obj and obj.created_at_local:
-            return format_local(obj.created_at_local)
-        return "-"
+    def created_local(self, obj):
+        return format_local(obj.created_at_utc)
+    created_local.short_description = "Дата создания"
 
-    def created_at_utc_formatted(self, obj):
-        if obj and obj.created_at_utc:
-            return format_utc(obj.created_at_utc)
+    def updated_local(self, obj):
+        if obj.updated_at_utc:
+            return format_local(obj.updated_at_utc)
         return "-"
-
-    def updated_at_local_formatted(self, obj):
-        if obj and obj.updated_at_local:
-            return format_local(obj.updated_at_local)
-        return "-"
-
-    def updated_at_utc_formatted(self, obj):
-        if obj and obj.updated_at_utc:
-            return format_utc(obj.updated_at_utc)
-        return "-"
+    updated_local.short_description = "Дата изменения"
 
     def display_created(self, obj):
-        if hasattr(obj, 'created_at_local') and obj.created_at_local:
-            return format_local(obj.created_at_local)
-        return "-"
-
-    created_at_local_formatted.short_description = "Дата создания (Минск)"
-    created_at_utc_formatted.short_description = "Дата создания (UTC)"
-    updated_at_local_formatted.short_description = "Дата изменения (Минск)"
-    updated_at_utc_formatted.short_description = "Дата изменения (UTC)"
+        return format_local(obj.created_at_utc)
     display_created.short_description = "Дата создания"
-    display_created.admin_order_field = 'created_at_local'
+    display_created.admin_order_field = 'created_at_utc'
 
 
 class UserProfileAdminForm(forms.ModelForm):
-    username = forms.CharField(label="Имя пользователя (Логин)", max_length=150)
+    username = forms.CharField(
+        label="Имя пользователя (Логин)",
+        max_length=150,
+        validators=[RegexValidator(r'^[a-zA-Z0-9_@+.]+$', 'Только латиница, цифры, @ . + - _')]
+    )
     email = forms.EmailField(label="Электронная почта", required=False)
     first_name = forms.CharField(label="Имя", max_length=150, required=False)
     last_name = forms.CharField(label="Фамилия", max_length=150, required=False)
+    birth_date = forms.DateField(
+        label="Дата рождения",
+        required=False,
+        widget=forms.DateInput(attrs={'type': 'date'})
+    )
     is_active = forms.BooleanField(label="Активен", required=False, initial=True)
-    is_staff = forms.BooleanField(label="Статус персонала (Сотрудник)", required=False)
-    is_superuser = forms.BooleanField(label="Статус суперпользователя (Админ)", required=False)
+    is_staff = forms.BooleanField(label="Статус персонала", required=False)
+    is_superuser = forms.BooleanField(label="Статус суперпользователя", required=False)
 
     class Meta:
         model = UserProfile
-        fields = ['photo', 'age', 'phone']
+        fields = ['photo', 'phone']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -103,6 +81,7 @@ class UserProfileAdminForm(forms.ModelForm):
                     self.fields['email'].initial = user.email
                     self.fields['first_name'].initial = user.first_name
                     self.fields['last_name'].initial = user.last_name
+                    self.fields['birth_date'].initial = self.instance.birth_date
                     self.fields['is_active'].initial = user.is_active
                     self.fields['is_staff'].initial = user.is_staff
                     self.fields['is_superuser'].initial = user.is_superuser
@@ -111,40 +90,74 @@ class UserProfileAdminForm(forms.ModelForm):
 
     def clean_username(self):
         username = self.cleaned_data.get('username')
+        if not username:
+            raise forms.ValidationError("Логин обязателен.")
+        if not re.match(r'^[a-zA-Z0-9_@+.]+$', username):
+            raise forms.ValidationError("Логин только на латинице.")
+        qs = User.objects.filter(username__iexact=username)
         if self.instance and self.instance.pk:
-            if User.objects.filter(username=username).exclude(pk=self.instance.user.pk).exists():
-                logger.warning(f"Попытка использовать занятый логин: {username}")
-                raise forms.ValidationError("Пользователь с таким логином уже существует.")
-        else:
-            if User.objects.filter(username=username).exists():
-                logger.warning(f"Попытка создать пользователя с существующим логином: {username}")
-                raise forms.ValidationError("Пользователь с таким логином уже существует.")
+            qs = qs.exclude(pk=self.instance.user.pk)
+        if qs.exists():
+            raise forms.ValidationError("Пользователь с таким логином уже существует.")
         return username
+
+    def clean_birth_date(self):
+        birth_date = self.cleaned_data.get('birth_date')
+        if birth_date:
+            today = date.today()
+            age = today.year - birth_date.year - ((today.month, today.day) < (birth_date.month, birth_date.day))
+            if age < 18:
+                raise forms.ValidationError("Возраст должен быть 18 или более лет!")
+        return birth_date
 
 
 @admin.register(UserProfile)
 class UserProfileAdmin(TimeStampedAdminMixin, admin.ModelAdmin):
     form = UserProfileAdminForm
-    list_display = ('get_username', 'get_email', 'phone', 'age', 'display_created')
-    search_fields = ('user__username', 'user__email', 'phone')
-    list_filter = ('age',)
+    list_display = ('get_username', 'get_email', 'phone', 'get_age_display', 'display_created')
+    search_fields = ('user__username__icontains', 'user__email__icontains', 'phone')
+    list_filter = ('birth_date',)
+    ordering = ('user__username',)
     fieldsets = (
         ('Данные учетной записи', {'fields': ('username', 'email', 'first_name', 'last_name')}),
-        ('Личные данные', {'fields': ('photo', 'age', 'phone')}),
+        ('Личные данные', {'fields': ('photo', 'birth_date', 'age_display', 'phone')}),
         ('Права доступа', {'fields': ('is_active', 'is_staff', 'is_superuser')}),
-        ('Даты создания и изменения', {
-            'fields': ('created_at_local_formatted', 'created_at_utc_formatted',
-                       'updated_at_local_formatted', 'updated_at_utc_formatted'),
+        ('Даты', {
+            'fields': ('created_local', 'updated_local'),
             'classes': ('collapse',)
         }),
     )
-    readonly_fields = ('get_date_joined', 'get_last_login')
+    readonly_fields = ('get_date_joined', 'get_last_login', 'age_display')
+
+    def get_search_results(self, request, queryset, search_term):
+        queryset, use_distinct = super().get_search_results(request, queryset, search_term)
+        if search_term:
+            queryset |= self.model.objects.filter(
+                user__username__icontains=search_term
+            ) | self.model.objects.filter(
+                user__email__icontains=search_term
+            )
+        return queryset, use_distinct
+
+    def age_display(self, obj):
+        if obj.age is not None:
+            return f"{obj.age} лет"
+        return "—"
+    age_display.short_description = "Возраст"
+
+    def get_age_display(self, obj):
+        if obj.age is not None:
+            return f"{obj.age} лет"
+        return "—"
+    get_age_display.short_description = "Возраст"
+    get_age_display.admin_order_field = 'birth_date'
 
     def save_model(self, request, obj, form, change):
         username = form.cleaned_data.get('username')
         email = form.cleaned_data.get('email', '')
         first_name = form.cleaned_data.get('first_name', '')
         last_name = form.cleaned_data.get('last_name', '')
+        birth_date = form.cleaned_data.get('birth_date')
         is_active = form.cleaned_data.get('is_active', True)
         is_staff = form.cleaned_data.get('is_staff', False)
         is_superuser = form.cleaned_data.get('is_superuser', False)
@@ -159,6 +172,7 @@ class UserProfileAdmin(TimeStampedAdminMixin, admin.ModelAdmin):
             user.is_staff = is_staff
             user.is_superuser = is_superuser
             user.save()
+            obj.birth_date = birth_date
             logger.info(f"Администратор {request.user.username}: профиль обновлен: {username}")
         else:
             post_save.disconnect(create_user_profile, sender=User)
@@ -173,6 +187,7 @@ class UserProfileAdmin(TimeStampedAdminMixin, admin.ModelAdmin):
                     is_superuser=is_superuser,
                 )
                 obj.user = user
+                obj.birth_date = birth_date
                 logger.info(f"Администратор {request.user.username}: создан новый профиль: {username}")
             except Exception as e:
                 logger.error(f"Ошибка создания пользователя {username}: {e}", exc_info=True)
@@ -192,28 +207,28 @@ class UserProfileAdmin(TimeStampedAdminMixin, admin.ModelAdmin):
             return obj.user.username
         except User.DoesNotExist:
             return "—"
+    get_username.short_description = 'Логин'
+    get_username.admin_order_field = 'user__username'
 
     def get_email(self, obj):
         try:
             return obj.user.email
         except User.DoesNotExist:
             return "—"
+    get_email.short_description = 'Email'
 
     def get_date_joined(self, obj):
         try:
             return format_local(obj.user.date_joined)
         except User.DoesNotExist:
             return "—"
+    get_date_joined.short_description = "Дата регистрации"
 
     def get_last_login(self, obj):
         try:
             return format_local(obj.user.last_login)
         except User.DoesNotExist:
             return "—"
-
-    get_username.short_description = 'Логин'
-    get_email.short_description = 'Email'
-    get_date_joined.short_description = "Дата регистрации"
     get_last_login.short_description = "Последний вход"
 
     class Media:
@@ -226,21 +241,11 @@ class NewsArticleAdmin(TimeStampedAdminMixin, admin.ModelAdmin):
     search_fields = ('title',)
     fieldsets = (
         ('Основная информация', {'fields': ('title', 'short_description', 'content', 'image')}),
-        ('Даты создания и изменения', {
-            'fields': ('created_at_local_formatted', 'created_at_utc_formatted',
-                       'updated_at_local_formatted', 'updated_at_utc_formatted'),
+        ('Даты', {
+            'fields': ('created_local', 'updated_local'),
             'classes': ('collapse',)
         }),
     )
-
-    def save_model(self, request, obj, form, change):
-        action = "обновлена" if change else "создана"
-        super().save_model(request, obj, form, change)
-        logger.info(f"Администратор {request.user.username}: новость '{obj.title}' {action}")
-
-    def delete_model(self, request, obj):
-        logger.warning(f"Администратор {request.user.username}: удаление новости '{obj.title}'")
-        super().delete_model(request, obj)
 
 
 @admin.register(Review)
@@ -250,21 +255,11 @@ class ReviewAdmin(TimeStampedAdminMixin, admin.ModelAdmin):
     list_filter = ('rating',)
     fieldsets = (
         ('Информация об отзыве', {'fields': ('user', 'rating', 'text')}),
-        ('Даты создания и изменения', {
-            'fields': ('created_at_local_formatted', 'created_at_utc_formatted',
-                       'updated_at_local_formatted', 'updated_at_utc_formatted'),
+        ('Даты', {
+            'fields': ('created_local', 'updated_local'),
             'classes': ('collapse',)
         }),
     )
-
-    def save_model(self, request, obj, form, change):
-        action = "обновлен" if change else "создан"
-        super().save_model(request, obj, form, change)
-        logger.info(f"Администратор {request.user.username}: отзыв пользователя {obj.user.username} {action}")
-
-    def delete_model(self, request, obj):
-        logger.warning(f"Администратор {request.user.username}: удаление отзыва #{obj.id}")
-        super().delete_model(request, obj)
 
 
 @admin.register(Ticket)
@@ -274,21 +269,11 @@ class TicketAdmin(TimeStampedAdminMixin, admin.ModelAdmin):
     list_filter = ('showtime',)
     fieldsets = (
         ('Информация о билете', {'fields': ('showtime', 'customer', 'row', 'seat')}),
-        ('Даты создания и изменения', {
-            'fields': ('created_at_local_formatted', 'created_at_utc_formatted',
-                       'updated_at_local_formatted', 'updated_at_utc_formatted'),
+        ('Даты', {
+            'fields': ('created_local', 'updated_local'),
             'classes': ('collapse',)
         }),
     )
-
-    def save_model(self, request, obj, form, change):
-        action = "обновлен" if change else "создан"
-        super().save_model(request, obj, form, change)
-        logger.info(f"Администратор {request.user.username}: билет #{obj.id} {action}")
-
-    def delete_model(self, request, obj):
-        logger.warning(f"Администратор {request.user.username}: удаление билета #{obj.id}")
-        super().delete_model(request, obj)
 
 
 @admin.register(PromoCode)
@@ -298,21 +283,11 @@ class PromoCodeAdmin(TimeStampedAdminMixin, admin.ModelAdmin):
     list_filter = ('is_active',)
     fieldsets = (
         ('Информация о промокоде', {'fields': ('code', 'description', 'is_active')}),
-        ('Даты создания и изменения', {
-            'fields': ('created_at_local_formatted', 'created_at_utc_formatted',
-                       'updated_at_local_formatted', 'updated_at_utc_formatted'),
+        ('Даты', {
+            'fields': ('created_local', 'updated_local'),
             'classes': ('collapse',)
         }),
     )
-
-    def save_model(self, request, obj, form, change):
-        action = "обновлен" if change else "создан"
-        super().save_model(request, obj, form, change)
-        logger.info(f"Администратор {request.user.username}: промокод '{obj.code}' {action}")
-
-    def delete_model(self, request, obj):
-        logger.warning(f"Администратор {request.user.username}: удаление промокода '{obj.code}'")
-        super().delete_model(request, obj)
 
 
 @admin.register(Movie)
@@ -326,21 +301,11 @@ class MovieAdmin(TimeStampedAdminMixin, admin.ModelAdmin):
             'fields': ('title_ru', 'title_en', 'description', 'duration', 'budget', 'rating', 'poster')
         }),
         ('Категории', {'fields': ('genres', 'countries')}),
-        ('Даты создания и изменения', {
-            'fields': ('created_at_local_formatted', 'created_at_utc_formatted',
-                       'updated_at_local_formatted', 'updated_at_utc_formatted'),
+        ('Даты', {
+            'fields': ('created_local', 'updated_local'),
             'classes': ('collapse',)
         }),
     )
-
-    def save_model(self, request, obj, form, change):
-        action = "обновлен" if change else "создан"
-        super().save_model(request, obj, form, change)
-        logger.info(f"Администратор {request.user.username}: фильм '{obj.title_ru}' {action}")
-
-    def delete_model(self, request, obj):
-        logger.warning(f"Администратор {request.user.username}: удаление фильма '{obj.title_ru}'")
-        super().delete_model(request, obj)
 
 
 @admin.register(Showtime)
@@ -350,21 +315,11 @@ class ShowtimeAdmin(TimeStampedAdminMixin, admin.ModelAdmin):
     list_filter = ('hall', 'start_time')
     fieldsets = (
         ('Информация о сеансе', {'fields': ('movie', 'hall', 'start_time', 'ticket_price')}),
-        ('Даты создания и изменения', {
-            'fields': ('created_at_local_formatted', 'created_at_utc_formatted',
-                       'updated_at_local_formatted', 'updated_at_utc_formatted'),
+        ('Даты', {
+            'fields': ('created_local', 'updated_local'),
             'classes': ('collapse',)
         }),
     )
-
-    def save_model(self, request, obj, form, change):
-        action = "обновлен" if change else "создан"
-        super().save_model(request, obj, form, change)
-        logger.info(f"Администратор {request.user.username}: сеанс фильма '{obj.movie.title_ru}' {action}")
-
-    def delete_model(self, request, obj):
-        logger.warning(f"Администратор {request.user.username}: удаление сеанса #{obj.id}")
-        super().delete_model(request, obj)
 
 
 @admin.register(CinemaHall)
@@ -372,22 +327,12 @@ class CinemaHallAdmin(TimeStampedAdminMixin, admin.ModelAdmin):
     list_display = ('name', 'rows_count', 'seats_per_row', 'capacity', 'display_created')
     fieldsets = (
         ('Информация о зале', {'fields': ('name', 'rows_count', 'seats_per_row', 'capacity')}),
-        ('Даты создания и изменения', {
-            'fields': ('created_at_local_formatted', 'created_at_utc_formatted',
-                       'updated_at_local_formatted', 'updated_at_utc_formatted'),
+        ('Даты', {
+            'fields': ('created_local', 'updated_local'),
             'classes': ('collapse',)
         }),
     )
     readonly_fields = ('capacity',)
-
-    def save_model(self, request, obj, form, change):
-        action = "обновлен" if change else "создан"
-        super().save_model(request, obj, form, change)
-        logger.info(f"Администратор {request.user.username}: зал '{obj.name}' {action}")
-
-    def delete_model(self, request, obj):
-        logger.warning(f"Администратор {request.user.username}: удаление зала '{obj.name}'")
-        super().delete_model(request, obj)
 
 
 @admin.register(ContactEmployee)
@@ -395,42 +340,43 @@ class ContactEmployeeAdmin(TimeStampedAdminMixin, admin.ModelAdmin):
     list_display = ('display_full_name', 'position', 'display_email', 'display_phone', 'is_visible', 'display_created')
     search_fields = ('user__username', 'user__first_name', 'user__last_name', 'position', 'user__email')
     list_filter = ('is_visible', 'position')
+    ordering = ('user__username',)
     fieldsets = (
         ('Сотрудник', {'fields': ('user', 'position', 'is_visible')}),
         ('Контактная информация', {
             'fields': ('phone', 'email', 'photo'),
-            'description': 'Оставьте пустыми, чтобы использовать данные из профиля пользователя'
+            'description': 'Оставьте пустыми — данные возьмутся из профиля'
         }),
         ('Дополнительно', {'fields': ('description',)}),
-        ('Даты создания и изменения', {
-            'fields': ('created_at_local_formatted', 'created_at_utc_formatted',
-                       'updated_at_local_formatted', 'updated_at_utc_formatted'),
+        ('Даты', {
+            'fields': ('created_local', 'updated_local'),
             'classes': ('collapse',)
         }),
     )
-    readonly_fields = ('display_full_name', 'display_email', 'display_phone')
 
-    def save_model(self, request, obj, form, change):
-        action = "обновлен" if change else "создан"
-        super().save_model(request, obj, form, change)
-        logger.info(f"Администратор {request.user.username}: контакт сотрудника '{obj.get_full_name()}' {action}")
-
-    def delete_model(self, request, obj):
-        logger.warning(f"Администратор {request.user.username}: удаление контакта '{obj.get_full_name()}'")
-        super().delete_model(request, obj)
+    def get_search_results(self, request, queryset, search_term):
+        queryset, use_distinct = super().get_search_results(request, queryset, search_term)
+        if search_term:
+            queryset |= self.model.objects.filter(
+                user__username__icontains=search_term
+            ) | self.model.objects.filter(
+                user__first_name__icontains=search_term
+            ) | self.model.objects.filter(
+                user__last_name__icontains=search_term
+            )
+        return queryset, use_distinct
 
     def display_full_name(self, obj):
         return obj.get_full_name()
+    display_full_name.short_description = 'ФИО Сотрудника'
+    display_full_name.admin_order_field = 'user__last_name'
 
     def display_email(self, obj):
         return obj.get_email() or "—"
+    display_email.short_description = 'Email'
 
     def display_phone(self, obj):
         return obj.get_phone() or "—"
-
-    display_full_name.short_description = 'ФИО Сотрудника'
-    display_full_name.admin_order_field = 'user__last_name'
-    display_email.short_description = 'Email'
     display_phone.short_description = 'Телефон'
 
 
@@ -441,30 +387,63 @@ class JobVacancyAdmin(TimeStampedAdminMixin, admin.ModelAdmin):
     list_filter = ('is_active',)
     fieldsets = (
         ('Информация о вакансии', {'fields': ('title', 'description', 'salary', 'is_active')}),
-        ('Даты создания и изменения', {
-            'fields': ('created_at_local_formatted', 'created_at_utc_formatted',
-                       'updated_at_local_formatted', 'updated_at_utc_formatted'),
+        ('Даты', {
+            'fields': ('created_local', 'updated_local'),
             'classes': ('collapse',)
         }),
     )
 
-    def save_model(self, request, obj, form, change):
-        action = "обновлена" if change else "создана"
-        super().save_model(request, obj, form, change)
-        logger.info(f"Администратор {request.user.username}: вакансия '{obj.title}' {action}")
 
-    def delete_model(self, request, obj):
-        logger.warning(f"Администратор {request.user.username}: удаление вакансии '{obj.title}'")
-        super().delete_model(request, obj)
+@admin.register(AboutCompany)
+class AboutCompanyAdmin(TimeStampedAdminMixin, admin.ModelAdmin):
+    fieldsets = (
+        (None, {'fields': ('title', 'description', 'logo', 'requisites')}),
+        ('Даты', {
+            'fields': ('created_local', 'updated_local'),
+            'classes': ('collapse',)
+        }),
+    )
 
 
-@admin.register(AboutCompany, PrivacyPolicy, Country, Genre, FAQItem)
-class GeneralAdmin(TimeStampedAdminMixin, admin.ModelAdmin):
-    def save_model(self, request, obj, form, change):
-        action = "обновлен(а)" if change else "создан(а)"
-        super().save_model(request, obj, form, change)
-        logger.info(f"Администратор {request.user.username}: {self.model._meta.verbose_name} '{obj}' {action}")
+@admin.register(PrivacyPolicy)
+class PrivacyPolicyAdmin(TimeStampedAdminMixin, admin.ModelAdmin):
+    fieldsets = (
+        (None, {'fields': ('title', 'content')}),
+        ('Даты', {
+            'fields': ('created_local', 'updated_local'),
+            'classes': ('collapse',)
+        }),
+    )
 
-    def delete_model(self, request, obj):
-        logger.warning(f"Администратор {request.user.username}: удаление {self.model._meta.verbose_name} '{obj}'")
-        super().delete_model(request, obj)
+
+@admin.register(Country)
+class CountryAdmin(TimeStampedAdminMixin, admin.ModelAdmin):
+    fieldsets = (
+        (None, {'fields': ('name',)}),
+        ('Даты', {
+            'fields': ('created_local', 'updated_local'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+@admin.register(Genre)
+class GenreAdmin(TimeStampedAdminMixin, admin.ModelAdmin):
+    fieldsets = (
+        (None, {'fields': ('name',)}),
+        ('Даты', {
+            'fields': ('created_local', 'updated_local'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+@admin.register(FAQItem)
+class FAQItemAdmin(TimeStampedAdminMixin, admin.ModelAdmin):
+    fieldsets = (
+        (None, {'fields': ('question', 'answer')}),
+        ('Даты', {
+            'fields': ('created_local', 'updated_local'),
+            'classes': ('collapse',)
+        }),
+    )

@@ -1,7 +1,8 @@
 import base64
 import calendar
 import io
-from datetime import datetime, timedelta
+import re
+from datetime import timedelta
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -15,6 +16,7 @@ from django.db.models import Avg, Count, Q, Sum
 from django.db.models.functions import TruncDate
 from django.shortcuts import get_object_or_404, redirect, render
 
+from core import settings
 from .forms import ReviewForm
 from .models import *
 
@@ -111,12 +113,12 @@ def dashboard_view(request):
 
     rating_counts = [reviews.filter(rating=i).count() for i in range(1, 6)]
 
-    utc_now = datetime.now(zoneinfo.ZoneInfo("UTC"))
-    user_tz_name = "Europe/Minsk"
-    user_now = datetime.now(zoneinfo.ZoneInfo(user_tz_name))
+    now_utc = timezone.now()
+    now_local = timezone.localtime(now_utc)
+    tz_name = settings.TIME_ZONE
 
-    current_date_formatted = user_now.strftime("%d/%m/%Y")
-    html_cal = calendar.HTMLCalendar(calendar.MONDAY).formatmonth(user_now.year, user_now.month)
+    current_date_formatted = now_local.strftime("%d/%m/%Y")
+    html_cal = calendar.HTMLCalendar(calendar.MONDAY).formatmonth(now_local.year, now_local.month)
 
     context = {
         'avg_rating': avg_rating,
@@ -128,30 +130,39 @@ def dashboard_view(request):
         'movies_alphabetical': movies_alphabetical,
         'rating_counts': rating_counts,
         'current_date_formatted': current_date_formatted,
-        'utc_time': utc_now.strftime("%d/%m/%Y %H:%M:%S UTC"),
-        'user_time': user_now.strftime("%d/%m/%Y %H:%M:%S") + f" ({user_tz_name})",
+        'utc_time': now_utc.strftime("%d/%m/%Y %H:%M:%S UTC"),
+        'user_time': now_local.strftime("%d/%m/%Y %H:%M:%S") + f" ({tz_name})",
         'html_calendar': html_cal,
     }
     return render(request, 'cinema/dashboard.html', context)
 
 
 def register_view(request):
-    """Регистрация нового пользователя."""
     logger.info(f"Попытка регистрации с IP: {request.META.get('REMOTE_ADDR', 'unknown')}")
 
     if request.method == 'POST':
         form = UserCreationForm(request.POST)
-        first_name = request.POST.get('first_name')
-        last_name = request.POST.get('last_name')
-        email = request.POST.get('email')
-        phone = request.POST.get('phone')
-        age = request.POST.get('age')
+        username = request.POST.get('username', '')
+        first_name = request.POST.get('first_name', '')
+        last_name = request.POST.get('last_name', '')
+        email = request.POST.get('email', '')
+        phone = request.POST.get('phone', '')
+        birth_date = request.POST.get('birth_date', '')
         photo = request.FILES.get('photo')
 
+        # Валидация латиницы
+        if not re.match(r'^[a-zA-Z0-9_@+.]+$', username):
+            messages.error(request, "Логин должен содержать только латинские буквы, цифры и символы.")
+            return render(request, 'cinema/register.html', {'form': form})
+
+        # Валидация email
+        if email and not re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', email):
+            messages.error(request, "Введите корректный email.")
+            return render(request, 'cinema/register.html', {'form': form})
+
         if form.is_valid():
-            if not age or int(age) < 18:
-                logger.warning(f"Попытка регистрации несовершеннолетнего (возраст: {age})")
-                messages.error(request, "Регистрация доступна только лицам старше 18 лет.")
+            if not birth_date:
+                messages.error(request, "Укажите дату рождения.")
                 return render(request, 'cinema/register.html', {'form': form})
 
             user = form.save(commit=False)
@@ -163,7 +174,7 @@ def register_view(request):
                 user.email = email
             user.save()
 
-            user.profile.age = int(age)
+            user.profile.birth_date = birth_date
             if photo:
                 user.profile.photo = photo
             if phone:
@@ -171,11 +182,11 @@ def register_view(request):
             user.profile.save()
 
             login(request, user)
-            logger.info(f"Новый пользователь зарегистрирован: {user.username} (email: {email})")
+            logger.info(f"Новый пользователь зарегистрирован: {user.username}")
             messages.success(request, "Регистрация прошла успешно!")
             return redirect('profile')
         else:
-            logger.warning(f"Ошибка валидации формы регистрации: {form.errors}")
+            logger.warning(f"Ошибка валидации: {form.errors}")
     else:
         form = UserCreationForm()
     return render(request, 'cinema/register.html', {'form': form})
@@ -208,7 +219,7 @@ def logout_view(request):
 
 def index_view(request):
     """Главная страница сайта."""
-    latest_news = NewsArticle.objects.order_by('-created_at_local').first()
+    latest_news = NewsArticle.objects.order_by('-created_at_utc').first()
     return render(request, 'cinema/index.html', {'latest_news': latest_news})
 
 
@@ -388,6 +399,14 @@ def reviews_view(request):
 
 
 @login_required
+def review_delete_view(request, review_id):
+    """Удаление отзыва пользователем."""
+    review = get_object_or_404(Review, id=review_id, user=request.user)
+    review.delete()
+    messages.success(request, "Отзыв удален!")
+    return redirect('reviews')
+
+@login_required
 def profile_view(request):
     """Личный кабинет пользователя с историей билетов или панелью администратора."""
     logger.debug(f"Загрузка профиля пользователя: {request.user.username}")
@@ -411,10 +430,17 @@ def profile_view(request):
             total=Sum('showtime__ticket_price')
         )['total'] or 0
 
-        active_ages = list(UserProfile.objects.filter(
+        profiles = UserProfile.objects.filter(
             user__is_staff=False, user__is_superuser=False
-        ).values_list('age', flat=True))
-        active_ages = sorted([age for age in active_ages if age is not None])
+        )
+
+        active_ages = []
+        for p in profiles:
+            age = p.age
+            if age is not None:
+                active_ages.append(age)
+
+        active_ages = sorted(active_ages)
 
         total_clients = len(active_ages)
         avg_age = round(sum(active_ages) / total_clients, 1) if total_clients > 0 else 0

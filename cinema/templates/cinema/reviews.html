@@ -1,15 +1,15 @@
 {% extends 'cinema/base.html' %}
-
+{% load tz %}
 {% block content %}
 <div style="max-width: 800px; margin: 0 auto; padding: 20px; font-family: sans-serif;">
 
-    <h2 style="color: #333; margin-bottom: 30px; text-align: center;">💬 Отзывы наших посетителей</h2>
+    <h2 style="color: #333; margin-bottom: 30px; text-align: center;">Отзывы наших посетителей</h2>
 
     {% if user.is_authenticated %}
         {% if can_review %}
             <div style="background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 8px; padding: 25px; margin-bottom: 40px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
                 <h3 style="margin-top: 0; margin-bottom: 20px; color: #111; font-size: 18px;">
-                    {% if user_review %}✏️ Редактировать ваш отзыв{% else %}Оставить свой отзыв{% endif %}
+                    {% if user_review %}Редактировать ваш отзыв{% else %}Оставить свой отзыв{% endif %}
                 </h3>
 
                 <form method="post" style="display: flex; flex-direction: column; gap: 15px;">
@@ -29,9 +29,16 @@
                         {{ form.text }}
                     </div>
 
-                    <button type="submit" style="background: #007bff; color: white; padding: 12px 20px; border: none; border-radius: 4px; font-weight: bold; font-size: 15px; cursor: pointer; transition: background 0.2s; align-self: flex-start;">
-                        {% if user_review %}Сохранить изменения{% else %}Отправить отзыв{% endif %}
-                    </button>
+                    <div style="display: flex; gap: 10px;">
+                        <button type="submit" style="background: #007bff; color: white; padding: 12px 20px; border: none; border-radius: 4px; font-weight: bold; font-size: 15px; cursor: pointer;">
+                            {% if user_review %}Сохранить изменения{% else %}Отправить отзыв{% endif %}
+                        </button>
+                        {% if user_review %}
+                            <a href="{% url 'review_delete' user_review.id %}"
+                               style="background: #dc3545; color: white; padding: 12px 20px; border-radius: 4px; text-decoration: none; font-weight: bold; font-size: 15px;"
+                               onclick="return confirm('Удалить отзыв?')">Удалить</a>
+                        {% endif %}
+                    </div>
                 </form>
             </div>
         {% else %}
@@ -52,14 +59,29 @@
 
     {% if user_review %}
         <h3 style="color: #333; margin-bottom: 15px; font-size: 16px; font-weight: bold;">Ваш опубликованный отзыв:</h3>
-        <div style="background: #f0f7ff; border: 2px solid #007bff; border-radius: 8px; padding: 20px; margin-bottom: 35px; box-shadow: 0 4px 6px rgba(0,123,255,0.04);">
+        <div style="background: #f0f7ff; border: 2px solid #007bff; border-radius: 8px; padding: 20px; margin-bottom: 35px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                <span style="font-weight: bold; color: #007bff; font-size: 16px;">
-                    👤 {{ user_review.user.username }} <span style="font-weight: normal; color: #666; font-size: 14px;">(Вы)</span>
+                <span style="font-weight: bold; color: #007bff; font-size: 16px; display: flex; align-items: center;">
+                    {% if user_review.user.profile.photo %}
+                        <img src="{{ user_review.user.profile.photo.url }}" style="width: 30px; height: 30px; border-radius: 50%; object-fit: cover; margin-right: 8px;">
+                    {% else %}
+                        <span style="font-size: 20px; margin-right: 8px;">👤</span>
+                    {% endif %}
+                    {{ user_review.user.username }}
+                    <span style="font-weight: normal; color: #666; font-size: 14px; margin-left: 5px;">(Вы)</span>
                 </span>
-                <span style="color: #777; font-size: 13px;">
-                    {{ user_review.created_at_local|date:"d.m.Y H:i" }}
-                </span>
+                <div style="text-align: right;">
+                    <span style="color: #777; font-size: 13px; display: block;">
+                        Создан: {{ user_review.created_at_local|date:"d.m.Y H:i" }}
+                        (UTC: {{ user_review.created_at_utc|date:"d.m.Y H:i" }})
+                    </span>
+                    {% if user_review.updated_at_utc %}
+                        <span style="color: #999; font-size: 12px;">
+                            Изменён: {{ user_review.updated_at_local|date:"d.m.Y H:i" }}
+                            (UTC: {{ user_review.updated_at_utc|date:"d.m.Y H:i" }})
+                        </span>
+                    {% endif %}
+                </div>
             </div>
 
             <div style="color: #ffc107; font-size: 16px; margin-bottom: 12px; letter-spacing: 2px;">
@@ -83,12 +105,26 @@
         {% for review in reviews %}
             <div style="background: #ffffff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.03);">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <span style="font-weight: bold; color: #111; font-size: 16px;">
-                        👤 {{ review.user.username }}
+                    <span style="font-weight: bold; color: #111; font-size: 16px; display: flex; align-items: center;">
+                        {% if review.user.profile.photo %}
+                            <img src="{{ review.user.profile.photo.url }}" style="width: 30px; height: 30px; border-radius: 50%; object-fit: cover; margin-right: 8px;">
+                        {% else %}
+                            <span style="font-size: 20px; margin-right: 8px;">👤</span>
+                        {% endif %}
+                        {{ review.user.username }}
                     </span>
-                    <span style="color: #999; font-size: 13px;">
-                        {{ review.created_at_local|date:"d.m.Y H:i" }}
-                    </span>
+                    <div style="text-align: right;">
+                        <span style="color: #999; font-size: 13px; display: block;">
+                            {{ review.created_at_utc|date:"d.m.Y H:i" }}
+                            (UTC: {{ review.created_at_utc|utc|date:"d.m.Y H:i" }})
+                        </span>
+                        {% if review.updated_at_utc %}
+                            <span style="color: #aaa; font-size: 11px;">
+                                изм: {{ review.updated_at_utc|date:"d.m.Y H:i" }}
+                                (UTC: {{ review.updated_at_utc|utc|date:"d.m.Y H:i" }})
+                            </span>
+                        {% endif %}
+                    </div>
                 </div>
 
                 <div style="color: #ffc107; font-size: 16px; margin-bottom: 12px; letter-spacing: 2px;">
@@ -98,17 +134,13 @@
                     {% elif review.rating == 2 %} ★★☆☆☆
                     {% else %} ★☆☆☆☆
                     {% endif %}
-                    <span style="color: #555; font-size: 13px; font-weight: bold; margin-left: 5px; font-family: inherit;">({{ review.rating }} из 5)</span>
+                    <span style="color: #555; font-size: 13px; font-weight: bold; margin-left: 5px;">({{ review.rating }} из 5)</span>
                 </div>
 
                 <p style="color: #444; line-height: 1.6; margin: 0; font-size: 15px; white-space: pre-line;">{{ review.text }}</p>
             </div>
         {% empty %}
-            {% if not user_review %}
-                <p style="text-align: center; color: #777; font-size: 16px; margin-top: 20px;">Отзывов пока нет. Будьте первыми, кто поделится своим мнением!</p>
-            {% else %}
-                <p style="text-align: center; color: #777; font-size: 15px; margin-top: 10px;">Других отзывов пока не опубликовано.</p>
-            {% endif %}
+            <p style="text-align: center; color: #777; font-size: 16px; margin-top: 20px;">Отзывов пока нет. Будьте первыми, кто поделится своим мнением!</p>
         {% endfor %}
     </div>
 

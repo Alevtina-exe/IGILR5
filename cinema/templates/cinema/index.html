@@ -1,6 +1,6 @@
 {% extends 'cinema/base.html' %}
 {% load static %}
-
+{% load tz %}
 {% block content %}
 <h2>Добро пожаловать в кинотеатр "Grand Cinema"!</h2>
 <p>Мы автоматизировали систему управления расписанием и продажей билетов.</p>
@@ -23,14 +23,21 @@
             </div>
         {% else %}
             <div style="flex-shrink: 0;">
-                <img src="{% static 'news.jpg' %}" alt="News"
+                <img src="{% static 'news.png' %}" alt="News"
                      style="width: 200px; height: 150px; object-fit: cover; border-radius: 8px;">
             </div>
         {% endif %}
 
         <div>
             <h4 style="margin-top: 0;">{{ latest_news.title }}</h4>
-            <p style="font-size: 0.9em; color: #666;"><em>Опубликовано: {{ latest_news.created_at_local|date:"d/m/Y H:i" }}</em></p>
+            <p style="font-size: 0.9em; color: #666;">
+                Опубликовано: {{ latest_news.created_at_utc|date:"d/m/Y H:i" }}
+                (UTC: {{ latest_news.created_at_utc|utc|date:"d/m/Y H:i" }})
+                {% if latest_news.updated_at_utc %}
+                    <br>Изменено: {{ latest_news.updated_at_utc|date:"d/m/Y H:i" }}
+                    (UTC: {{ latest_news.updated_at_utc|utc|date:"d/m/Y H:i" }})
+                {% endif %}
+            </p>
             <p>{{ latest_news.short_description }}</p>
 
             {% if user.is_authenticated and user.is_superuser or user.employee_contact %}

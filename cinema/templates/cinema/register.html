@@ -4,92 +4,89 @@
 <div style="max-width: 400px; margin: 50px auto; padding: 30px; border: 1px solid #e0e0e0; border-radius: 8px; background: #fff; box-shadow: 0 4px 6px rgba(0,0,0,0.05); font-family: sans-serif;">
     <h2 style="text-align: center; margin-top: 0; color: #333; margin-bottom: 25px;">Создание аккаунта</h2>
 
+    {% if messages %}
+        {% for message in messages %}
+            <p style="color: red; text-align: center;">{{ message }}</p>
+        {% endfor %}
+    {% endif %}
+
     <form method="post" enctype="multipart/form-data" style="display: flex; flex-direction: column; gap: 15px;">
         {% csrf_token %}
 
+        <div>
+            <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #555; font-size: 14px;">Логин (только латиница):</label>
+            <input type="text" name="username" required pattern="[a-zA-Z0-9_@+.]+" title="Только латинские буквы, цифры, @ . + - _" placeholder="username" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:4px;">
+        </div>
+
         {% for field in form %}
+            {% if field.name != 'username' %}
             <div>
                 <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #555; font-size: 14px;">{{ field.label }}:</label>
                 {{ field }}
                 {% if field.errors %}
-                    <p style="color: red; font-size: 12px; margin: 5px 0 0 0;">{{ field.errors.as_text }}</p>
+                    <p style="color: red; font-size: 12px;">{{ field.errors.as_text }}</p>
                 {% endif %}
             </div>
+            {% endif %}
         {% endfor %}
 
         <div>
-            <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #555; font-size: 14px;" for="id_first_name">Имя:</label>
-            <input type="text" name="first_name" id="id_first_name" required placeholder="Иван">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #555; font-size: 14px;">Имя:</label>
+            <input type="text" name="first_name" placeholder="Иван" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:4px;">
         </div>
 
         <div>
-            <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #555; font-size: 14px;" for="id_last_name">Фамилия:</label>
-            <input type="text" name="last_name" id="id_last_name" required placeholder="Иванов">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #555; font-size: 14px;">Фамилия:</label>
+            <input type="text" name="last_name" placeholder="Иванов" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:4px;">
         </div>
 
         <div>
-            <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #555; font-size: 14px;" for="id_email">Электронная почта:</label>
-            <input type="email" name="email" id="id_email" required placeholder="example@mail.com">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #555; font-size: 14px;">Email:</label>
+            <input type="email" name="email" placeholder="example@mail.com" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:4px;">
         </div>
 
         <div>
-            <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #555; font-size: 14px;" for="id_phone">Номер телефона:</label>
-            <input type="text"
-                   name="phone"
-                   id="id_phone"
-                   required
-                   pattern="\+375 \((29|25|33|44)\) \d{3}-\d{2}-\d{2}"
-                   title="Формат должен быть строго: +375 (29) XXX-XX-XX"
-                   placeholder="+375 (29) 123-45-67">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #555; font-size: 14px;">Телефон:</label>
+            <input type="text" name="phone" id="id_phone" pattern="\+375 \(\d{2}\) \d{3}-\d{2}-\d{2}" title="Формат: +375 (XX) XXX-XX-XX" placeholder="+375 (29) 123-45-67" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:4px;">
         </div>
 
         <div>
-            <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #555; font-size: 14px;" for="id_age">Возраст:</label>
-            <input type="number" name="age" id="id_age" min="18" required>
+            <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #555; font-size: 14px;">Дата рождения:</label>
+            <input type="date" name="birth_date" required max="{{ '18_years_ago' }}" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:4px;">
         </div>
 
         <div>
-            <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #555; font-size: 14px;" for="id_photo">Фото профиля:</label>
-            <input type="file" name="photo" id="id_photo" accept="image/*" style="width: 100%; padding: 8px 0; font-size: 14px; box-sizing: border-box;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #555; font-size: 14px;">Фото профиля:</label>
+            <input type="file" name="photo" accept="image/*" style="width:100%; padding:8px 0;">
         </div>
 
-        <button type="submit" style="background: #007bff; color: white; padding: 12px; border: none; border-radius: 4px; font-weight: bold; font-size: 16px; cursor: pointer; margin-top: 10px;">
+        <button type="submit" style="background: #007bff; color: white; padding: 12px; border: none; border-radius: 4px; font-weight: bold; font-size: 16px; cursor: pointer;">
             Создать аккаунт
         </button>
     </form>
 </div>
 
-<style>
-    form input[type="text"], form input[type="password"], form input[type="number"], form input[type="email"] {
-        width: 100%;
-        padding: 10px;
-        border-radius: 4px;
-        border: 1px solid #ccc;
-        font-size: 15px;
-        box-sizing: border-box;
-    }
-</style>
-
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Исправили селектор: теперь скрипт точно видит input по его id="id_phone"
-    const phoneInput = document.getElementById('id_phone') || document.querySelector('input[name="phone"]');
-
+    const phoneInput = document.getElementById('id_phone');
     if (phoneInput) {
-        phoneInput.placeholder = "+375 (XX) XXX-XX-XX";
-
         phoneInput.addEventListener('input', function(e) {
-            let matrix = "+375 (__) ___-__-__",
-                i = 0,
+            let matrix = "+375 (__) ___-__-__", i = 0,
                 def = matrix.replace(/\D/g, ""),
                 val = this.value.replace(/\D/g, "");
-
             if (def.length >= val.length) val = def;
-
             this.value = matrix.replace(/./g, function(a) {
                 return /[_\d]/.test(a) && i < val.length ? val.charAt(i++) : i >= val.length ? "" : a;
             });
         });
+    }
+
+    // Максимальная дата = 18 лет назад
+    const today = new Date();
+    const maxDate = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
+    const dateInput = document.querySelector('input[name="birth_date"]');
+    if (dateInput) {
+        dateInput.max = maxDate.toISOString().split('T')[0];
     }
 });
 </script>

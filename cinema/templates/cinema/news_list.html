@@ -1,22 +1,56 @@
 {% extends 'cinema/base.html' %}
+{% load static %}
+{% load tz %}
 {% block content %}
 <div style="max-width: 800px; margin: 0 auto; padding: 20px;">
     <h2 style="text-align: center; margin-bottom: 30px;">Новости</h2>
-    
+
     <div style="display: flex; flex-direction: column; gap: 20px;">
         {% for article in news %}
-            <div style="background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px;">
+            <div style="background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px; display: flex; gap: 20px; align-items: flex-start;">
                 {% if article.image %}
-                    <img src="{{ article.image.url }}" alt="{{ article.title }}" style="width: 100%; max-height: 300px; object-fit: cover; border-radius: 6px; margin-bottom: 15px;">
+                    <img src="{{ article.image.url }}" alt="{{ article.title }}" style="width: 200px; height: 150px; object-fit: cover; border-radius: 6px; flex-shrink: 0;">
+                {% else %}
+                    <img src="{% static 'news.png' %}" alt="News" style="width: 200px; height: 150px; object-fit: cover; border-radius: 6px; flex-shrink: 0;">
                 {% endif %}
-                <h3 style="margin: 0 0 10px 0;">{{ article.title }}</h3>
-                <p style="color: #999; font-size: 13px; margin-bottom: 10px;">{{ article.created_at_local|date:"d.m.Y H:i" }}</p>
-                <p style="color: #555;">{{ article.short_description }}</p>
-                <p style="color: #333; line-height: 1.6;">{{ article.content }}</p>
+
+                <div style="flex: 1;">
+                    <h3 style="margin: 0 0 10px 0;">{{ article.title }}</h3>
+                    <p style="color: #999; font-size: 13px; margin-bottom: 10px;">
+                        Создано: {{ article.created_at_utc|date:"d.m.Y H:i" }}
+                        (UTC: {{ article.created_at_utc|utc|date:"d.m.Y H:i" }})
+                        {% if article.updated_at_utc %}
+                            <br>Изменено: {{ article.updated_at_utc|date:"d.m.Y H:i" }}
+                            (UTC: {{ article.updated_at_utc|utc|date:"d.m.Y H:i" }})
+                        {% endif %}
+                    </p>
+                    <p style="color: #555; margin-bottom: 10px;">{{ article.short_description }}</p>
+
+                    <div class="article-{{ article.id }}">
+                        <a href="#" onclick="toggleContent({{ article.id }}); return false;" class="toggle-btn-{{ article.id }}" style="background: #007bff; color: white; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold; text-decoration: none; display: inline-block;">Читать далее</a>
+                        <div class="content-{{ article.id }}" style="display: none; margin-top: 15px; color: #333; line-height: 1.6;">
+                            {{ article.content|linebreaks }}
+                        </div>
+                    </div>
+                </div>
             </div>
         {% empty %}
             <p style="text-align: center; color: #777;">Новостей пока нет.</p>
         {% endfor %}
     </div>
 </div>
+
+<script>
+function toggleContent(id) {
+    var content = document.querySelector('.content-' + id);
+    var btn = document.querySelector('.toggle-btn-' + id);
+    if (content.style.display === 'none') {
+        content.style.display = 'block';
+        btn.textContent = 'Скрыть';
+    } else {
+        content.style.display = 'none';
+        btn.textContent = 'Читать далее';
+    }
+}
+</script>
 {% endblock %}

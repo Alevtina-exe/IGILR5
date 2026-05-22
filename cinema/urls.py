@@ -28,4 +28,5 @@ urlpatterns = [
     re_path(r'^movie/(?P<movie_id>\d+)/showtime/add/$', views.showtime_create_view, name='showtime_create'),
     re_path(r'^showtime/(?P<showtime_id>\d+)/edit/$', views.showtime_update_view, name='showtime_update'),
     re_path(r'^showtime/(?P<showtime_id>\d+)/delete/$', views.showtime_delete_view, name='showtime_delete'),
+    re_path(r'^review/(?P<review_id>\d+)/delete/$', views.review_delete_view, name='review_delete'),
 ]

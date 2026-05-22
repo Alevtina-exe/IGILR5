@@ -1,6 +1,5 @@
 import logging
-import zoneinfo
-
+from datetime import date
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
@@ -18,41 +17,28 @@ def validate_age(value):
 
 
 class TimeStampedModel(models.Model):
-    """Абстрактная модель с автоматическим сохранением дат в UTC и локальной таймзоне."""
-
-    created_at_utc = models.DateTimeField(null=True, blank=True, verbose_name="Дата создания (UTC)")
-    created_at_local = models.DateTimeField(null=True, blank=True, verbose_name="Дата создания (Минск)")
-    updated_at_utc = models.DateTimeField(null=True, blank=True, verbose_name="Дата изменения (UTC)")
-    updated_at_local = models.DateTimeField(null=True, blank=True, verbose_name="Дата изменения (Минск)")
+    created_at_utc = models.DateTimeField(null=True, blank=True, verbose_name="Дата создания")
+    updated_at_utc = models.DateTimeField(null=True, blank=True, verbose_name="Дата изменения")
 
     class Meta:
         abstract = True
 
+
     def save(self, *args, **kwargs):
         now_utc = timezone.now()
-        minsk_tz = zoneinfo.ZoneInfo("Europe/Minsk")
-        now_minsk = now_utc.astimezone(minsk_tz)
-
         if not self.pk:
             if not self.created_at_utc:
                 self.created_at_utc = now_utc
-            if not self.created_at_local:
-                self.created_at_local = now_minsk
             logger.debug(f"Создание объекта {self.__class__.__name__}")
-
         if self.pk:
             self.updated_at_utc = now_utc
-            self.updated_at_local = now_minsk
             logger.debug(f"Обновление объекта {self.__class__.__name__} id={self.pk}")
-
         super().save(*args, **kwargs)
 
 
 class UserProfile(TimeStampedModel):
-    """Расширенный профиль пользователя с возрастом, фото и телефоном."""
-
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
-    age = models.IntegerField(default=18, validators=[validate_age], verbose_name="Возраст")
+    birth_date = models.DateField(null=True, blank=True, verbose_name="Дата рождения")
     photo = models.ImageField(upload_to='users_photos/', blank=True, null=True, verbose_name="Фото профиля")
 
     phone_regex = RegexValidator(
@@ -67,6 +53,17 @@ class UserProfile(TimeStampedModel):
         verbose_name="Номер телефона"
     )
 
+    @property
+    def age(self):
+        if self.birth_date:
+            today = date.today()
+            return today.year - self.birth_date.year - ((today.month, today.day) < (self.birth_date.month, self.birth_date.day))
+        return None
+
+    def clean(self):
+        if self.age is not None and self.age < 18:
+            raise ValidationError("Возраст должен быть 18 или более лет!")
+
     class Meta:
         verbose_name = "Пользователь"
         verbose_name_plural = "Пользователи"
@@ -80,7 +77,7 @@ class UserProfile(TimeStampedModel):
             logger.debug(f"Обновлен профиль пользователя: {self.user.username}")
 
     def __str__(self):
-        return f"Профиль: {self.user.username} (Возраст: {self.age})"
+        return f"Профиль: {self.user.username}"
 
 
 @receiver(post_save, sender=User)

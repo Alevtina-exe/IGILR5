@@ -152,18 +152,6 @@
                 <p style="font-size: 14px; color: #777; margin: 0;">Сейчас нет активных промокодов.</p>
             {% endfor %}
         </div>
-
-        <h4 style="margin: 20px 0 10px 0; color: #777; font-size: 15px;">Архивные (истекшие) купоны:</h4>
-        <div style="display: flex; gap: 15px; flex-wrap: wrap; opacity: 0.6;">
-            {% for promo in archived_promos %}
-                <div style="background: #f5f5f5; border: 2px dashed #999; padding: 8px 12px; border-radius: 4px; text-align: center; min-width: 160px;">
-                    <span style="font-family: monospace; font-size: 16px; font-weight: bold; color: #666; display: block; margin-bottom: 3px; text-decoration: line-through;">{{ promo.code }}</span>
-                    <span style="font-size: 11px; color: #888;">{{ promo.description }}</span>
-                </div>
-            {% empty %}
-                <p style="font-size: 13px; color: #999; margin: 0;">Архив пуст.</p>
-            {% endfor %}
-        </div>
     </div>
 
 </div>
